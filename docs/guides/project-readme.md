@@ -10,18 +10,6 @@ A Telegram bot for learning Greek with AI-powered assistance and spaced repetiti
 - **Learning Statistics**: Track your progress and learning streaks
 - **Interactive Learning**: Review cards with immediate feedback and intelligent scheduling
 
-## Documentation
-
-📚 **Comprehensive documentation is available in the [`/docs`](./docs) directory.**
-
-- [Quick Start Guide](./docs/guides/quickstart.md) - Get started in 5 minutes
-- [Setup Instructions](./docs/guides/setup.md) - Detailed installation guide
-- [Architecture Overview](./docs/architecture/system-overview.md) - System design
-- [API Reference](./docs/api/services.md) - Service and repository APIs
-- [Development Guide](./docs/development/documentation-workflow.md) - Contributing
-
-The documentation is maintained by a **Documentation Agent** that ensures it's always up-to-date with the codebase.
-
 ## Tech Stack
 
 - **Bot Framework**: aiogram 3.x

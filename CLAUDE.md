@@ -10,6 +10,59 @@ This is a Greek language learning Telegram bot built with:
 - **OpenAI API** for AI-powered features
 - **SM-2 algorithm** for spaced repetition system
 
+## Documentation
+
+**IMPORTANT**: All project documentation lives in `/docs` directory and is maintained by the **Documentation Agent**.
+
+### Documentation Structure
+
+```
+docs/
+├── README.md              # Documentation hub
+├── architecture/          # System design and architecture
+├── api/                   # API reference documentation
+├── guides/                # User and setup guides
+└── development/           # Developer documentation
+```
+
+### Working with Documentation
+
+1. **Reading Documentation**: Start with `/docs/README.md` for navigation
+2. **Architecture Info**: See `/docs/architecture/system-overview.md`
+3. **API Reference**: Check `/docs/api/` for service and repository APIs
+4. **Development Workflow**: Read `/docs/development/documentation-workflow.md`
+
+### Documentation Agent
+
+A specialized subagent maintains all documentation. To invoke:
+
+```bash
+# Automatic - triggers on code changes
+# Manual invocation
+/docs [command]
+
+# Examples
+/docs update          # Update all documentation
+/docs verify          # Verify documentation accuracy
+/docs api Services    # Update API docs for services
+```
+
+**Key Principles**:
+- **Single Source of Truth**: All docs in `/docs`
+- **Always Current**: Updated with code changes
+- **Comprehensive**: Covers architecture, APIs, guides
+
+### When to Update Documentation
+
+Update docs when you:
+- ✅ Add new features or services
+- ✅ Modify existing APIs or signatures
+- ✅ Change architecture or patterns
+- ✅ Update dependencies or configuration
+- ✅ Fix bugs that affect documented behavior
+
+The Documentation Agent will handle updates automatically, but you can also update manually and commit with code changes.
+
 ## Essential Commands
 
 ### Running the Bot
