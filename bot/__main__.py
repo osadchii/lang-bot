@@ -63,6 +63,10 @@ async def main():
     # Startup actions
     await on_startup()
 
+    # Delete any existing webhook before polling
+    await bot.delete_webhook(drop_pending_updates=True)
+    logger.info("Webhook deleted, pending updates dropped")
+
     try:
         # Start polling
         logger.info("Starting polling...")
