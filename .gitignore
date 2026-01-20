@@ -139,3 +139,14 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Docker & CI/CD
+postgres_data/
+keys.txt
+age.agekey
+secrets.env.dec
+.env.production.dec
+.deploy/f
+
+# SOPS encrypted secrets (uncomment after encrypting secrets.env)
+!secrets.env

@@ -1,110 +1,69 @@
 # Documentation Guide - Quick Reference
 
-## 📚 Где найти документацию?
+## Where to Find Documentation
 
-Вся документация проекта находится в папке **`/docs`**.
+All project documentation is in **`/docs`**.
 
-### Основные разделы:
+### Main Sections
 
-1. **[docs/README.md](./docs/README.md)** - Главная страница документации, навигация по всем разделам
+1. **[docs/README.md](./docs/README.md)** - Documentation hub
+2. **[docs/architecture/](./docs/architecture/)** - System architecture
+3. **[docs/api/](./docs/api/)** - API reference
+4. **[docs/guides/](./docs/guides/)** - Guides
+5. **[docs/development/](./docs/development/)** - Developer docs
 
-2. **[docs/architecture/](./docs/architecture/)** - Архитектура системы
-   - `system-overview.md` - Общая архитектура, паттерны, компоненты
-   - `database-schema.md` - Схема базы данных, таблицы, отношения
+## Documentation Agent
 
-3. **[docs/api/](./docs/api/)** - API справка
-   - `services.md` - API всех сервисов с примерами кода
+**Location**: `.claude/agents/documentation-agent.md`
 
-4. **[docs/guides/](./docs/guides/)** - Руководства
-   - `quickstart.md` - Быстрый старт
-   - `setup.md` - Подробная установка
-   - `project-readme.md` - README проекта
-
-5. **[docs/development/](./docs/development/)** - Для разработчиков
-   - `documentation-workflow.md` - Как работать с документацией
-
-## 🤖 Агент документации
-
-**Местоположение**: `.agents/documentation-agent.md`
-
-### Что делает агент?
-
-- ✅ Автоматически обновляет документацию при изменении кода
-- ✅ Проверяет актуальность примеров кода
-- ✅ Следит за правильностью ссылок
-- ✅ Поддерживает единый стиль документации
-
-### Как использовать?
-
-#### В Claude Code:
+### Commands
 
 ```bash
-# Обновить всю документацию
-/docs update
-
-# Проверить документацию на актуальность
-/docs verify
-
-# Обновить API документацию для конкретного сервиса
-/docs api CardService
-
-# Обновить документацию архитектуры
-/docs architecture
+/docs update          # Update all documentation
+/docs verify          # Verify accuracy
+/docs api Services    # Update API docs
+/docs architecture    # Update architecture docs
 ```
 
-#### В обычном разговоре:
+## When to Update
 
-```
-"documentation agent, please update the services API"
-"@documentation-agent verify all documentation is up to date"
-```
+Update documentation when you:
+- Add new features/services
+- Modify APIs
+- Change architecture/patterns
+- Update dependencies/configuration
+- Fix bugs affecting documented behavior
 
-## 📝 Когда обновлять документацию?
+## Workflow
 
-Обновляйте документацию, когда:
+### Automatic (Recommended)
+1. Make code changes
+2. Documentation agent auto-detects changes
+3. Updates relevant docs
+4. Commit code + docs together
 
-- ✅ Добавляете новую функциональность
-- ✅ Изменяете API сервисов
-- ✅ Меняете архитектуру или паттерны
-- ✅ Обновляете зависимости
-- ✅ Меняете конфигурацию
-- ✅ Исправляете баги, влияющие на задокументированное поведение
-
-## 🔄 Рабочий процесс
-
-### Автоматически (рекомендуется):
-
-1. Вносите изменения в код
-2. Агент документации автоматически обнаруживает изменения
-3. Обновляет соответствующие разделы документации
-4. Коммитите код вместе с обновленной документацией
-
-### Вручную:
-
-1. Вносите изменения в код
-2. Обновляете соответствующие файлы в `/docs`
-3. Коммитите код и документацию вместе:
+### Manual
+1. Make code changes
+2. Update files in `/docs`
+3. Commit together:
    ```bash
    git add bot/services/new_service.py docs/api/services.md
    git commit -m "feat: Add NewService with documentation"
    ```
 
-## 📋 Структура документа
-
-Каждый документ в `/docs` следует стандарту:
+## Document Structure
 
 ```markdown
-# Заголовок документа
+# Document Title
 
 ## Overview
-Краткое описание
+Brief description
 
-## Основные разделы
+## Main Sections
 ...
 
 ## Further Reading
-- [Связанный документ 1](./related-1.md)
-- [Связанный документ 2](../api/related-2.md)
+- [Related Document](./related.md)
 
 ---
 
@@ -112,63 +71,44 @@
 **Maintained by**: Documentation Agent
 ```
 
-## 🎯 Быстрые ссылки
+## Quick Links
 
-| Что нужно | Где найти |
-|-----------|-----------|
-| Начать работу | [Quick Start](./docs/guides/quickstart.md) |
-| Понять архитектуру | [System Overview](./docs/architecture/system-overview.md) |
-| Посмотреть API | [Services API](./docs/api/services.md) |
-| Узнать про БД | [Database Schema](./docs/architecture/database-schema.md) |
-| Работа с документацией | [Documentation Workflow](./docs/development/documentation-workflow.md) |
+| Need | Where |
+|------|-------|
+| Get Started | [Quick Start](./docs/guides/quickstart.md) |
+| Architecture | [System Overview](./docs/architecture/system-overview.md) |
+| API Reference | [Services API](./docs/api/services.md) |
+| Database | [Database Schema](./docs/architecture/database-schema.md) |
+| Documentation Workflow | [Workflow](./docs/development/documentation-workflow.md) |
 
-## 🔍 Поиск в документации
+## Search Documentation
 
-### Поиск по всей документации:
 ```bash
-grep -r "искомый текст" docs/
-```
+# All documentation
+grep -r "search term" docs/
 
-### Поиск в определенной категории:
-```bash
+# Specific category
 grep -r "SearchTerm" docs/api/
-```
 
-### Список всех файлов документации:
-```bash
+# List all files
 find docs -name "*.md" -type f
 ```
 
-## 📊 Принципы документации
+## Principles
 
-1. **Single Source of Truth** - Одна версия правды, все в `/docs`
-2. **Always Current** - Всегда актуально
-3. **Comprehensive** - Полнота охвата
-4. **Clear Examples** - Понятные примеры кода
+1. **Single Source of Truth** - Everything in `/docs`
+2. **Always Current** - Updated with code changes
+3. **Comprehensive** - Full coverage
+4. **Clear Examples** - Code examples included
 
-## 🚀 Следующие шаги
+## Help
 
-1. **Начните с**: [docs/README.md](./docs/README.md)
-2. **Изучите архитектуру**: [System Overview](./docs/architecture/system-overview.md)
-3. **Посмотрите примеры API**: [Services API](./docs/api/services.md)
-4. **Узнайте о workflow**: [Documentation Workflow](./docs/development/documentation-workflow.md)
-
-## 💡 Подсказки
-
-- Документация **версионируется** в Git вместе с кодом
-- Агент документации **не заменяет** docstrings в коде - они дополняют друг друга
-- Если нашли устаревшую информацию - создайте issue или обновите сами
-- Используйте агента для **больших обновлений**, мелкие можно делать вручную
-
-## 📞 Получить помощь
-
-Если не можете найти нужную информацию:
-
-1. Проверьте [docs/README.md](./docs/README.md)
-2. Используйте поиск: `grep -r "topic" docs/`
-3. Спросите агента документации: `/docs find topic`
-4. Создайте issue на GitHub
+If you can't find what you need:
+1. Check [docs/README.md](./docs/README.md)
+2. Search: `grep -r "topic" docs/`
+3. Ask documentation agent: `/docs find topic`
+4. Create GitHub issue
 
 ---
 
-**Помните**: Хорошая документация делает проект доступным для всех! 🎉
+**Remember**: Good documentation makes the project accessible to everyone.

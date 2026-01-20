@@ -1,135 +1,121 @@
 # GitHub Setup Instructions
 
-Репозиторий готов к выгрузке на GitHub!
+Repository is ready for GitHub!
 
-## Что уже сделано
+## Already Done
 
-✅ Git репозиторий инициализирован
-✅ Все файлы добавлены в staging
-✅ Создан initial commit с описанием проекта
-✅ Обновлен .gitignore (добавлена папка .claude/)
-✅ Ветка переименована в `main`
+- Git repository initialized
+- Files added to staging
+- Initial commit created
+- .gitignore updated (.claude/ added)
+- Branch renamed to `main`
 
-## Как выгрузить на GitHub
+## Upload to GitHub
 
-### Вариант 1: Создать новый репозиторий на GitHub
+### Option 1: Create New Repository
 
-1. **Перейдите на GitHub** и создайте новый репозиторий:
+1. **Create repository on GitHub**:
    - https://github.com/new
-   - Название: `greek-learning-bot` (или любое другое)
-   - **НЕ** инициализируйте с README, .gitignore или лицензией (они уже есть локально)
-   - Выберите видимость (Public или Private)
+   - Name: `greek-learning-bot` (or any name)
+   - **DO NOT** initialize with README, .gitignore, or license
+   - Choose visibility (Public or Private)
 
-2. **Подключите удаленный репозиторий:**
+2. **Add remote repository:**
    ```bash
-   git remote add origin https://github.com/ВАШ_USERNAME/greek-learning-bot.git
+   git remote add origin https://github.com/YOUR_USERNAME/greek-learning-bot.git
    ```
 
-3. **Отправьте код на GitHub:**
+3. **Push code:**
    ```bash
    git push -u origin main
    ```
 
-### Вариант 2: Использовать существующий репозиторий
-
-Если у вас уже есть пустой репозиторий на GitHub:
+### Option 2: Use Existing Repository
 
 ```bash
-git remote add origin https://github.com/ВАШ_USERNAME/ВАШ_РЕПОЗИТОРИЙ.git
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 git push -u origin main
 ```
 
-### Вариант 3: Использовать SSH (рекомендуется для безопасности)
-
-Если у вас настроен SSH ключ:
+### Option 3: Use SSH (Recommended)
 
 ```bash
-git remote add origin git@github.com:ВАШ_USERNAME/greek-learning-bot.git
+git remote add origin git@github.com:YOUR_USERNAME/greek-learning-bot.git
 git push -u origin main
 ```
 
-## Проверка статуса
+## Check Status
 
-Проверить текущее состояние репозитория:
 ```bash
 git status
 git log --oneline
 git remote -v
 ```
 
-## После выгрузки
+## After Upload
 
-После успешного push на GitHub, вы можете:
+1. **Add topics** on GitHub:
+   - `telegram-bot`, `python`, `language-learning`
+   - `spaced-repetition`, `aiogram`, `openai`, `postgresql`
 
-1. **Добавить темы/topics** к репозиторию (на странице GitHub):
-   - `telegram-bot`
-   - `python`
-   - `language-learning`
-   - `spaced-repetition`
-   - `aiogram`
-   - `openai`
-   - `postgresql`
+2. **Setup GitHub Actions** for CI/CD (optional)
+3. **Add badges** to README.md (optional)
+4. **Create release** for versioning
 
-2. **Настроить GitHub Actions** для CI/CD (опционально)
+## Important Files
 
-3. **Добавить бейджи** в README.md (опционально)
+**NOT uploaded** to GitHub (.gitignore):
+- `.env` - environment variables (keep local!)
+- `.venv/` - virtual environment
+- `__pycache__/` - compiled Python files
+- `.idea/` - IDE settings
+- `.claude/` - Claude Code files
+- `*.db`, `*.sqlite` - databases
 
-4. **Создать release** для версионирования
+## Security
 
-## Важные файлы
+**IMPORTANT**: Ensure `.env` is **NOT** in repository!
 
-Следующие файлы **НЕ** будут загружены на GitHub (они в .gitignore):
-- `.env` - переменные окружения (храните локально!)
-- `.venv/` - виртуальное окружение
-- `__pycache__/` - скомпилированные Python файлы
-- `.idea/` - настройки IDE
-- `.claude/` - файлы Claude Code
-- `*.db`, `*.sqlite` - базы данных
-
-## Рекомендации по безопасности
-
-⚠️ **ВАЖНО**: Убедитесь, что файл `.env` **НЕ** добавлен в репозиторий!
-
-Проверьте:
+Check:
 ```bash
 git ls-files | grep .env
 ```
 
-Если команда ничего не вернула - отлично, `.env` не в репозитории.
+If command returns nothing - good, `.env` not in repo.
 
-## Дальнейшие шаги
+## Next Steps
 
-После выгрузки на GitHub:
+After uploading to GitHub:
 
-1. **Клонирование на другой машине:**
+1. **Clone on another machine:**
    ```bash
-   git clone https://github.com/ВАШ_USERNAME/greek-learning-bot.git
+   git clone https://github.com/YOUR_USERNAME/greek-learning-bot.git
    cd greek-learning-bot
    ```
 
-2. **Настройка окружения:**
+2. **Setup environment:**
    ```bash
    python -m venv .venv
-   source .venv/bin/activate  # На Windows: .venv\Scripts\activate
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-3. **Создание .env файла** с вашими ключами (смотрите `.env.example`)
+3. **Create .env file** with your keys (see `.env.example`)
 
-4. **Применение миграций:**
+4. **Apply migrations:**
    ```bash
    alembic upgrade head
    ```
 
-## Структура коммита
+## Commit Structure
 
-Текущий коммит включает:
-- **80 файлов** с полным функционалом бота
-- **7416 строк кода**
-- Все улучшения качества кода из CODE_REVIEW.md
-- Миграции базы данных
-- Документацию (README, SETUP, QUICKSTART, CLAUDE.md)
+Current commit includes:
+- **80 files** with full bot functionality
+- **7416 lines of code**
+- All improvements from CODE_REVIEW.md
+- Database migrations
+- Documentation (README, SETUP, QUICKSTART, CLAUDE.md)
 
 ---
 
-Готово! 🚀 Ваш проект готов к публикации на GitHub.
+Ready! Your project is ready for GitHub publication.

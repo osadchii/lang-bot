@@ -1,0 +1,81 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Testing
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files
+.env
+.env.*
+!.env.production.example
+secrets.env
+secrets.env.dec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database
+postgres_data/
+*.db
+*.sqlite
+*.sqlite3
+
+# SOPS and encryption
+keys.txt
+age.agekey
+.sops.yaml
+
+# Logs
+logs/
+*.log
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Deployment
+.deploy/
+
+# Keep these files
+!bot/
+!migrations/
+!alembic.ini
+!requirements.txt
+!entrypoint.sh
