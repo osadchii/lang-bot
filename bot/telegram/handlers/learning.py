@@ -34,8 +34,7 @@ async def start_learning_deck_selection(message: Message, session: AsyncSession,
 
     if not decks:
         await message.answer(
-            "❌ You don't have any decks yet.\n\n"
-            "Create a deck and add some cards first!",
+            "❌ You don't have any decks yet.\n\n" "Create a deck and add some cards first!",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -91,9 +90,7 @@ async def start_learning_session(
     await show_card_front(callback, state, session)
 
 
-async def show_card_front(
-    callback: CallbackQuery, state: FSMContext, session: AsyncSession
-):
+async def show_card_front(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     """Show the front of the current card.
 
     Args:
@@ -200,9 +197,7 @@ async def process_quality_rating(
 
     # Process the review
     learning_service = LearningService(session)
-    await learning_service.process_card_review(
-        card_id=card_id, user_id=user.id, quality=quality
-    )
+    await learning_service.process_card_review(card_id=card_id, user_id=user.id, quality=quality)
 
     # Update statistics
     cards_reviewed += 1

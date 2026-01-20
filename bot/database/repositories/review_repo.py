@@ -1,6 +1,6 @@
 """Review repository."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,9 +20,7 @@ class ReviewRepository(BaseRepository[Review]):
         """
         super().__init__(Review, session)
 
-    async def get_card_reviews(
-        self, card_id: int, limit: int | None = None
-    ) -> list[Review]:
+    async def get_card_reviews(self, card_id: int, limit: int | None = None) -> list[Review]:
         """Get all reviews for a card.
 
         Args:
@@ -86,9 +84,7 @@ class ReviewRepository(BaseRepository[Review]):
         if target_date is None:
             target_date = date.today()
 
-        start_of_day = datetime.combine(target_date, datetime.min.time()).replace(
-            tzinfo=timezone.utc
-        )
+        start_of_day = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=UTC)
         end_of_day = start_of_day + timedelta(days=1)
 
         query = (

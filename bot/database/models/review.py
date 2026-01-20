@@ -1,11 +1,18 @@
 """Review history model."""
 
-from datetime import datetime, timezone
+from __future__ import annotations
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bot.database.base import Base
+
+if TYPE_CHECKING:
+    from bot.database.models.card import Card
+    from bot.database.models.user import User
 
 
 class Review(Base):
@@ -25,13 +32,11 @@ class Review(Base):
     )  # 0=Again, 2=Hard, 3=Good, 5=Easy
     reviewed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
         index=True,
     )
-    time_spent: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )  # Time spent in seconds
+    time_spent: Mapped[int | None] = mapped_column(Integer, nullable=True)  # Time spent in seconds
 
     # SRS state at time of review (for analytics)
     ease_factor_before: Mapped[float | None] = mapped_column(nullable=True)
@@ -41,8 +46,8 @@ class Review(Base):
     __table_args__ = (Index("ix_reviews_user_date", "user_id", "reviewed_at"),)
 
     # Relationships
-    card: Mapped["Card"] = relationship("Card", back_populates="reviews")
-    user: Mapped["User"] = relationship("User", back_populates="reviews")
+    card: Mapped[Card] = relationship("Card", back_populates="reviews")
+    user: Mapped[User] = relationship("User", back_populates="reviews")
 
     def __repr__(self) -> str:
         return (

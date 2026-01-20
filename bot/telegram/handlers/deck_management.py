@@ -34,7 +34,9 @@ async def show_decks(event: Message | CallbackQuery, session: AsyncSession, user
     decks = await deck_service.get_user_decks(user.id)
 
     if not decks:
-        text = "📚 <b>You don't have any decks yet.</b>\n\nCreate your first deck to start learning!"
+        text = (
+            "📚 <b>You don't have any decks yet.</b>\n\nCreate your first deck to start learning!"
+        )
     else:
         text = f"📚 <b>Your Decks ({len(decks)})</b>\n\nSelect a deck to manage:"
 
@@ -84,8 +86,7 @@ async def process_deck_name(message: Message, state: FSMContext):
     await state.set_state(DeckCreation.waiting_for_description)
 
     await message.answer(
-        f"✅ Deck name: <b>{deck_name}</b>\n\n"
-        f"Now enter a description (or send /skip to skip):",
+        f"✅ Deck name: <b>{deck_name}</b>\n\n" f"Now enter a description (or send /skip to skip):",
         reply_markup=get_cancel_keyboard(),
     )
 
@@ -180,9 +181,7 @@ async def confirm_deck_deletion(callback: CallbackQuery, session: AsyncSession):
         f"This action cannot be undone."
     )
 
-    await callback.message.edit_text(
-        text, reply_markup=get_deck_delete_confirm_keyboard(deck_id)
-    )
+    await callback.message.edit_text(text, reply_markup=get_deck_delete_confirm_keyboard(deck_id))
     await callback.answer()
 
 

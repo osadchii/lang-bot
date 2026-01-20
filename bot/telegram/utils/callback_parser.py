@@ -1,9 +1,7 @@
 """Utilities for safely parsing Telegram callback data."""
 
-from typing import List, Optional
 
-
-def parse_callback_data(callback_data: str, expected_parts: int) -> Optional[List[str]]:
+def parse_callback_data(callback_data: str, expected_parts: int) -> list[str] | None:
     """
     Safely parse callback data.
 
@@ -27,7 +25,7 @@ def parse_callback_data(callback_data: str, expected_parts: int) -> Optional[Lis
     return parts
 
 
-def parse_callback_int(callback_data: str, part_index: int = 1) -> Optional[int]:
+def parse_callback_int(callback_data: str, part_index: int = 1) -> int | None:
     """
     Parse an integer from callback data.
 

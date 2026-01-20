@@ -1,6 +1,6 @@
 """Card scheduling and prioritization logic."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import NamedTuple
 
 from bot.database.models.card import Card
@@ -29,7 +29,7 @@ def prioritize_cards(cards: list[Card], current_time: datetime | None = None) ->
         Sorted list of cards by priority
     """
     if current_time is None:
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime.now(UTC)
 
     scheduled_cards: list[ScheduledCard] = []
 
@@ -133,7 +133,7 @@ def get_next_card_for_learning(
         return None
 
     if current_time is None:
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime.now(UTC)
 
     # Separate new and due cards
     new_cards = [c for c in deck_cards if c.repetitions == 0]

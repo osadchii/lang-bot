@@ -1,6 +1,6 @@
 """Card repository."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,7 +58,7 @@ class CardRepository(BaseRepository[Card]):
             List of due cards, ordered by next_review (oldest first)
         """
         if current_time is None:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now(UTC)
 
         query = (
             select(Card)
@@ -90,9 +90,7 @@ class CardRepository(BaseRepository[Card]):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def count_due_cards(
-        self, deck_id: int, current_time: datetime | None = None
-    ) -> int:
+    async def count_due_cards(self, deck_id: int, current_time: datetime | None = None) -> int:
         """Count cards due for review.
 
         Args:
@@ -103,7 +101,7 @@ class CardRepository(BaseRepository[Card]):
             Number of due cards
         """
         if current_time is None:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now(UTC)
 
         query = (
             select(func.count())

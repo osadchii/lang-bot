@@ -1,12 +1,10 @@
 """AI assistant handlers."""
 
 from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.services.ai_service import AIService
 from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
-from bot.telegram.states.ai_states import AIChat, GrammarExplanation, Translation
 
 router = Router(name="ai_chat")
 
@@ -40,10 +38,7 @@ async def translate_command(message: Message):
     text_to_translate = message.text[11:].strip()  # Remove "/translate "
 
     if not text_to_translate:
-        await message.answer(
-            "Please provide text to translate.\n\n"
-            "Example: /translate γεια σου"
-        )
+        await message.answer("Please provide text to translate.\n\n" "Example: /translate γεια σου")
         return
 
     thinking_msg = await message.answer("🤖 Translating...")
@@ -66,8 +61,7 @@ async def grammar_command(message: Message):
 
     if not greek_text:
         await message.answer(
-            "Please provide Greek text to explain.\n\n"
-            "Example: /grammar Το παιδί τρέχει"
+            "Please provide Greek text to explain.\n\n" "Example: /grammar Το παιδί τρέχει"
         )
         return
 
@@ -80,9 +74,21 @@ async def grammar_command(message: Message):
     await message.answer(f"<b>Grammar Explanation:</b>\n\n{explanation}")
 
 
-@router.message(F.text & ~F.text.startswith("/") & ~F.text.in_(
-    ["📚 My Decks", "📖 Learn", "➕ Add Card", "🤖 AI Assistant", "📊 Statistics", "❓ Help", "❌ Cancel"]
-))
+@router.message(
+    F.text
+    & ~F.text.startswith("/")
+    & ~F.text.in_(
+        [
+            "📚 My Decks",
+            "📖 Learn",
+            "➕ Add Card",
+            "🤖 AI Assistant",
+            "📊 Statistics",
+            "❓ Help",
+            "❌ Cancel",
+        ]
+    )
+)
 async def handle_ai_question(message: Message):
     """Handle general AI questions.
 

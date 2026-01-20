@@ -13,9 +13,7 @@ class AIService:
 
     def __init__(self):
         """Initialize AI service."""
-        self.client = AsyncOpenAI(
-            api_key=settings.openai_api_key, timeout=settings.openai_timeout
-        )
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.openai_timeout)
         self.model = settings.openai_model
         self.max_tokens = settings.openai_max_tokens
         self.temperature = settings.openai_temperature
@@ -231,7 +229,11 @@ class AIService:
 
         except RateLimitError:
             logger.warning("OpenAI rate limit exceeded")
-            return {"front": word, "back": "Rate limit exceeded. Please try again later.", "example": ""}
+            return {
+                "front": word,
+                "back": "Rate limit exceeded. Please try again later.",
+                "example": "",
+            }
         except APITimeoutError:
             logger.error("OpenAI request timeout")
             return {"front": word, "back": "Request timeout. Please try again.", "example": ""}

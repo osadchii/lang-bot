@@ -1,7 +1,7 @@
 """Learning service for managing study sessions and card reviews."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -127,7 +127,7 @@ class LearningService:
             Updated card instance
         """
         if current_time is None:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now(UTC)
 
         # Get card
         card = await self.card_repo.get_by_id(card_id)

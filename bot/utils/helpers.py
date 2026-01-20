@@ -1,6 +1,6 @@
 """Helper utilities."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def get_current_time() -> datetime:
@@ -9,10 +9,10 @@ def get_current_time() -> datetime:
     Returns:
         Current datetime in UTC
     """
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-def parse_callback_data(callback_data: str) -> dict[str, str]:
+def parse_callback_data(callback_data: str) -> dict[str, str | list[str]]:
     """Parse callback data string into dictionary.
 
     Args:

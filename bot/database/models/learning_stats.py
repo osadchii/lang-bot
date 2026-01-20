@@ -1,11 +1,18 @@
 """Learning statistics model."""
 
+from __future__ import annotations
+
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Index, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bot.database.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from bot.database.models.deck import Deck
+    from bot.database.models.user import User
 
 
 class LearningStats(Base, TimestampMixin):
@@ -15,9 +22,7 @@ class LearningStats(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    deck_id: Mapped[int] = mapped_column(
-        ForeignKey("decks.id", ondelete="CASCADE"), nullable=False
-    )
+    deck_id: Mapped[int] = mapped_column(ForeignKey("decks.id", ondelete="CASCADE"), nullable=False)
     date: Mapped[date] = mapped_column(Date, default=date.today, nullable=False, index=True)
 
     # Daily statistics
@@ -41,8 +46,8 @@ class LearningStats(Base, TimestampMixin):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="learning_stats")
-    deck: Mapped["Deck"] = relationship("Deck", back_populates="learning_stats")
+    user: Mapped[User] = relationship("User", back_populates="learning_stats")
+    deck: Mapped[Deck] = relationship("Deck", back_populates="learning_stats")
 
     @property
     def accuracy(self) -> float:

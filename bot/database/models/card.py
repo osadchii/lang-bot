@@ -1,11 +1,18 @@
 """Card model with spaced repetition data."""
 
-from datetime import datetime, timezone
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bot.database.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from bot.database.models.deck import Deck
+    from bot.database.models.review import Review
 
 
 class Card(Base, TimestampMixin):
@@ -28,7 +35,7 @@ class Card(Base, TimestampMixin):
     repetitions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     next_review: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
         index=True,
     )
@@ -44,8 +51,8 @@ class Card(Base, TimestampMixin):
     )
 
     # Relationships
-    deck: Mapped["Deck"] = relationship("Deck", back_populates="cards")
-    reviews: Mapped[list["Review"]] = relationship(
+    deck: Mapped[Deck] = relationship("Deck", back_populates="cards")
+    reviews: Mapped[list[Review]] = relationship(
         "Review", back_populates="card", cascade="all, delete-orphan"
     )
 
@@ -67,7 +74,7 @@ class Card(Base, TimestampMixin):
         Returns:
             True if the card should be reviewed now
         """
-        return datetime.now(timezone.utc) >= self.next_review
+        return datetime.now(UTC) >= self.next_review
 
     def __repr__(self) -> str:
         return (

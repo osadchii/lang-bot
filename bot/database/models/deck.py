@@ -1,9 +1,18 @@
 """Deck model for organizing cards."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bot.database.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from bot.database.models.card import Card
+    from bot.database.models.learning_stats import LearningStats
+    from bot.database.models.user import User
 
 
 class Deck(Base, TimestampMixin):
@@ -20,11 +29,11 @@ class Deck(Base, TimestampMixin):
     __table_args__ = (UniqueConstraint("user_id", "name", name="uq_user_deck_name"),)
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="decks")
-    cards: Mapped[list["Card"]] = relationship(
+    user: Mapped[User] = relationship("User", back_populates="decks")
+    cards: Mapped[list[Card]] = relationship(
         "Card", back_populates="deck", cascade="all, delete-orphan"
     )
-    learning_stats: Mapped[list["LearningStats"]] = relationship(
+    learning_stats: Mapped[list[LearningStats]] = relationship(
         "LearningStats", back_populates="deck", cascade="all, delete-orphan"
     )
 

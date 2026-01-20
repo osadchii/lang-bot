@@ -47,7 +47,9 @@ def get_card_actions_keyboard(card_id: int, deck_id: int) -> InlineKeyboardMarku
     return builder.as_markup()
 
 
-def get_card_list_keyboard(cards: list[Card], deck_id: int, offset: int = 0) -> InlineKeyboardMarkup:
+def get_card_list_keyboard(
+    cards: list[Card], deck_id: int, offset: int = 0
+) -> InlineKeyboardMarkup:
     """Get keyboard with list of cards.
 
     Args:
@@ -67,13 +69,9 @@ def get_card_list_keyboard(cards: list[Card], deck_id: int, offset: int = 0) -> 
     # Pagination buttons
     nav_buttons = []
     if offset > 0:
-        nav_buttons.append(
-            ("⬅️ Previous", f"view_cards:{deck_id}:{offset - 10}")
-        )
+        nav_buttons.append(("⬅️ Previous", f"view_cards:{deck_id}:{offset - 10}"))
     if len(cards) == 10:  # Assuming 10 cards per page
-        nav_buttons.append(
-            ("➡️ Next", f"view_cards:{deck_id}:{offset + 10}")
-        )
+        nav_buttons.append(("➡️ Next", f"view_cards:{deck_id}:{offset + 10}"))
 
     for text, callback in nav_buttons:
         builder.button(text=text, callback_data=callback)

@@ -6,7 +6,7 @@ that calculates optimal review intervals based on user performance.
 Reference: https://www.supermemo.com/en/archives1990-2015/english/ol/sm2
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
 from bot.core.constants import (
@@ -62,7 +62,7 @@ def calculate_next_review(
         5 (Easy): Perfect recall - larger interval increase
     """
     if current_time is None:
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime.now(UTC)
 
     # Validate quality
     if quality not in (QUALITY_AGAIN, QUALITY_HARD, QUALITY_GOOD, QUALITY_EASY):
@@ -149,7 +149,7 @@ def get_initial_srs_values() -> dict:
         "ease_factor": DEFAULT_EASE_FACTOR,
         "interval": 0,
         "repetitions": 0,
-        "next_review": datetime.now(timezone.utc),
+        "next_review": datetime.now(UTC),
     }
 
 

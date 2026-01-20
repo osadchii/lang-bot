@@ -1,6 +1,6 @@
 """Statistics service for tracking learning progress."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,9 +34,7 @@ class StatisticsService:
             target_date = date.today()
 
         # Get reviews for the day
-        start_of_day = datetime.combine(target_date, datetime.min.time()).replace(
-            tzinfo=timezone.utc
-        )
+        start_of_day = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=UTC)
         end_of_day = start_of_day + timedelta(days=1)
 
         reviews = await self.review_repo.get_user_reviews(
@@ -66,7 +64,7 @@ class StatisticsService:
         Returns:
             Dictionary with weekly statistics
         """
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=7)
 
         reviews = await self.review_repo.get_user_reviews(
@@ -78,7 +76,7 @@ class StatisticsService:
         total_time = sum(r.time_spent or 0 for r in reviews)
 
         # Group by day
-        daily_counts = {}
+        daily_counts: dict[date, int] = {}
         for review in reviews:
             review_date = review.reviewed_at.date()
             daily_counts[review_date] = daily_counts.get(review_date, 0) + 1

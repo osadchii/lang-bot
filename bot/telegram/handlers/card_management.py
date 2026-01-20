@@ -17,7 +17,7 @@ from bot.telegram.keyboards.card_keyboards import (
 from bot.telegram.keyboards.deck_keyboards import get_deck_list_keyboard
 from bot.telegram.keyboards.main_menu import get_cancel_keyboard, get_main_menu_keyboard
 from bot.telegram.states.card_states import CardAICreation, CardCreation
-from bot.telegram.utils.callback_parser import parse_callback_data, parse_callback_int
+from bot.telegram.utils.callback_parser import parse_callback_int
 
 router = Router(name="card_management")
 
@@ -36,8 +36,7 @@ async def start_add_card(message: Message, session: AsyncSession, user: User):
 
     if not decks:
         await message.answer(
-            "❌ You don't have any decks yet.\n\n"
-            "Create a deck first using <b>📚 My Decks</b>.",
+            "❌ You don't have any decks yet.\n\n" "Create a deck first using <b>📚 My Decks</b>.",
             reply_markup=get_main_menu_keyboard(),
         )
         return
@@ -61,14 +60,9 @@ async def choose_card_creation_method(callback: CallbackQuery):
         await callback.answer("Invalid data")
         return
 
-    text = (
-        "📝 <b>Add New Card</b>\n\n"
-        "How would you like to create the card?"
-    )
+    text = "📝 <b>Add New Card</b>\n\n" "How would you like to create the card?"
 
-    await callback.message.edit_text(
-        text, reply_markup=get_card_creation_method_keyboard(deck_id)
-    )
+    await callback.message.edit_text(text, reply_markup=get_card_creation_method_keyboard(deck_id))
     await callback.answer()
 
 
@@ -159,9 +153,7 @@ async def process_card_example(message: Message, state: FSMContext, session: Asy
 
     # Create card
     card_service = CardService(session)
-    card = await card_service.create_card(
-        deck_id=deck_id, front=front, back=back, example=example
-    )
+    card = await card_service.create_card(deck_id=deck_id, front=front, back=back, example=example)
 
     await state.clear()
 
@@ -276,8 +268,7 @@ async def view_deck_cards(callback: CallbackQuery, session: AsyncSession):
 
     if not cards:
         await callback.message.edit_text(
-            "📝 This deck has no cards yet.\n\n"
-            "Add some cards to start learning!"
+            "📝 This deck has no cards yet.\n\n" "Add some cards to start learning!"
         )
         await callback.answer()
         return

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models.user import User
 from bot.services.statistics_service import StatisticsService
-from bot.telegram.keyboards.main_menu import get_back_to_menu_keyboard, get_main_menu_keyboard
+from bot.telegram.keyboards.main_menu import get_back_to_menu_keyboard
 
 router = Router(name="statistics")
 
