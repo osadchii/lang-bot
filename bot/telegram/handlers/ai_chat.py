@@ -14,16 +14,6 @@ from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
 router = Router(name="ai_chat")
 
 
-@router.message(F.text == common_msg.BTN_AI_ASSISTANT)
-async def start_ai_assistant(message: Message):
-    """Start AI assistant interaction.
-
-    Args:
-        message: Message
-    """
-    await message.answer(ai_msg.MSG_AI_WELCOME, reply_markup=get_main_menu_keyboard())
-
-
 @router.message(F.text == "/clear_history")
 async def clear_history_command(
     message: Message,
@@ -141,9 +131,7 @@ async def grammar_command(
             common_msg.BTN_MY_DECKS,
             common_msg.BTN_LEARN,
             common_msg.BTN_ADD_CARD,
-            common_msg.BTN_AI_ASSISTANT,
             common_msg.BTN_STATISTICS,
-            common_msg.BTN_HELP,
             common_msg.BTN_CANCEL,
         ]
     )

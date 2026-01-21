@@ -17,11 +17,9 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     builder.button(text=msg.BTN_MY_DECKS)
     builder.button(text=msg.BTN_LEARN)
     builder.button(text=msg.BTN_ADD_CARD)
-    builder.button(text=msg.BTN_AI_ASSISTANT)
     builder.button(text=msg.BTN_STATISTICS)
-    builder.button(text=msg.BTN_HELP)
 
-    builder.adjust(2, 2, 2)
+    builder.adjust(2, 2)
 
     return builder.as_markup(resize_keyboard=True)
 

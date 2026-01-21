@@ -4,9 +4,7 @@
 BTN_MY_DECKS = "Мои колоды"
 BTN_LEARN = "Учить"
 BTN_ADD_CARD = "Добавить карточку"
-BTN_AI_ASSISTANT = "ИИ-помощник"
 BTN_STATISTICS = "Статистика"
-BTN_HELP = "Справка"
 BTN_CANCEL = "Отмена"
 
 # Navigation buttons

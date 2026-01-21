@@ -48,9 +48,7 @@ def _hash_word(word: str) -> str:
             common_msg.BTN_MY_DECKS,
             common_msg.BTN_LEARN,
             common_msg.BTN_ADD_CARD,
-            common_msg.BTN_AI_ASSISTANT,
             common_msg.BTN_STATISTICS,
-            common_msg.BTN_HELP,
             common_msg.BTN_CANCEL,
         ]
     )
