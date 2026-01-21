@@ -120,3 +120,48 @@ class DeckService:
             Total deck count
         """
         return await self.repo.count_user_decks(user_id)
+
+    async def get_user_decks_sorted(self, user_id: int) -> list[Deck]:
+        """Get all decks for a user, sorted (active first, then by name).
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of deck instances, active first
+        """
+        return await self.repo.get_user_decks_sorted(user_id)
+
+    async def get_active_decks(self, user_id: int) -> list[Deck]:
+        """Get active decks for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of active deck instances
+        """
+        return await self.repo.get_user_active_decks(user_id)
+
+    async def has_active_decks(self, user_id: int) -> bool:
+        """Check if user has any active decks.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            True if user has at least one active deck
+        """
+        count = await self.repo.count_active_decks(user_id)
+        return count > 0
+
+    async def toggle_deck_active(self, deck: Deck) -> Deck:
+        """Toggle deck active status.
+
+        Args:
+            deck: Deck instance to toggle
+
+        Returns:
+            Updated deck instance
+        """
+        return await self.repo.update(deck, is_active=not deck.is_active)

@@ -4,7 +4,9 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.core.constants import QUALITY_EASY, QUALITY_FORGOT, QUALITY_REMEMBERED
+from bot.database.models.deck import Deck
 from bot.messages import common as common_msg
+from bot.messages import decks as deck_msg
 from bot.messages import learning as learn_msg
 
 
@@ -39,19 +41,28 @@ def get_quality_rating_keyboard() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def get_deck_selection_keyboard(decks: list) -> InlineKeyboardMarkup:
+def get_deck_selection_keyboard(
+    decks: list[Deck],
+    show_learn_all: bool = False,
+) -> InlineKeyboardMarkup:
     """Get keyboard to select a deck for learning.
 
     Args:
-        decks: List of deck instances
+        decks: List of deck instances (should be sorted: active first)
+        show_learn_all: Whether to show "Learn All" button
 
     Returns:
         Inline keyboard with deck selection buttons
     """
     builder = InlineKeyboardBuilder()
 
+    # "Learn All" button first if enabled
+    if show_learn_all:
+        builder.button(text=learn_msg.BTN_LEARN_ALL, callback_data="learn:all")
+
     for deck in decks:
-        builder.button(text=deck.name, callback_data=f"learn:{deck.id}")
+        display_name = deck_msg.get_deck_display_name(deck.name, deck.is_active)
+        builder.button(text=display_name, callback_data=f"learn:{deck.id}")
 
     builder.button(text=common_msg.BTN_CANCEL, callback_data="main_menu")
 

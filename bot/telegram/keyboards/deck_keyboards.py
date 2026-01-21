@@ -12,7 +12,7 @@ def get_deck_list_keyboard(decks: list[Deck]) -> InlineKeyboardMarkup:
     """Get keyboard with list of decks.
 
     Args:
-        decks: List of deck instances
+        decks: List of deck instances (should be sorted: active first)
 
     Returns:
         Inline keyboard with deck buttons
@@ -20,7 +20,8 @@ def get_deck_list_keyboard(decks: list[Deck]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     for deck in decks:
-        builder.button(text=deck.name, callback_data=f"deck:{deck.id}")
+        display_name = deck_msg.get_deck_display_name(deck.name, deck.is_active)
+        builder.button(text=display_name, callback_data=f"deck:{deck.id}")
 
     builder.button(text=deck_msg.BTN_CREATE_DECK, callback_data="deck:create")
     builder.button(text=common_msg.BTN_BACK_TO_MENU, callback_data="main_menu")
@@ -30,11 +31,12 @@ def get_deck_list_keyboard(decks: list[Deck]) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def get_deck_actions_keyboard(deck_id: int) -> InlineKeyboardMarkup:
+def get_deck_actions_keyboard(deck_id: int, is_active: bool) -> InlineKeyboardMarkup:
     """Get keyboard with deck actions.
 
     Args:
         deck_id: Deck ID
+        is_active: Whether deck is currently active
 
     Returns:
         Inline keyboard with deck action buttons
@@ -45,6 +47,13 @@ def get_deck_actions_keyboard(deck_id: int) -> InlineKeyboardMarkup:
     builder.button(text=deck_msg.BTN_ADD_CARD_TO_DECK, callback_data=f"add_card:{deck_id}")
     builder.button(text=deck_msg.BTN_VIEW_CARDS, callback_data=f"view_cards:{deck_id}")
     builder.button(text=deck_msg.BTN_EDIT_DECK, callback_data=f"edit_deck:{deck_id}")
+
+    # Toggle button based on current status
+    if is_active:
+        builder.button(text=deck_msg.BTN_DISABLE_DECK, callback_data=f"toggle_deck:{deck_id}")
+    else:
+        builder.button(text=deck_msg.BTN_ENABLE_DECK, callback_data=f"toggle_deck:{deck_id}")
+
     builder.button(text=deck_msg.BTN_DELETE_DECK, callback_data=f"delete_deck:{deck_id}")
     builder.button(text=common_msg.BTN_BACK_TO_DECKS, callback_data="decks")
 

@@ -33,7 +33,7 @@ async def show_decks(event: Message | CallbackQuery, session: AsyncSession, user
         user: User instance
     """
     deck_service = DeckService(session)
-    decks = await deck_service.get_user_decks(user.id)
+    decks = await deck_service.get_user_decks_sorted(user.id)
 
     if not decks:
         text = deck_msg.MSG_NO_DECKS
@@ -140,7 +140,9 @@ async def show_deck_details(callback: CallbackQuery, session: AsyncSession):
         return
 
     text = deck_msg.get_deck_details_message(deck.name, deck.description, card_count)
-    await callback.message.edit_text(text, reply_markup=get_deck_actions_keyboard(deck_id))
+    await callback.message.edit_text(
+        text, reply_markup=get_deck_actions_keyboard(deck_id, deck.is_active)
+    )
     await callback.answer()
 
 
@@ -202,6 +204,48 @@ async def delete_deck(callback: CallbackQuery, session: AsyncSession, user: User
 
     # Show decks list after short delay
     await show_decks(callback, session, user)
+
+
+@router.callback_query(F.data.startswith("toggle_deck:"))
+async def toggle_deck_status(callback: CallbackQuery, session: AsyncSession, user: User):
+    """Toggle deck active status.
+
+    Args:
+        callback: Callback query
+        session: Database session
+        user: User instance
+    """
+    deck_id = parse_callback_int(callback.data)
+    if deck_id is None:
+        await callback.answer(common_msg.MSG_INVALID_DATA)
+        return
+
+    deck_service = DeckService(session)
+    deck = await deck_service.get_deck(deck_id)
+
+    if not deck:
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
+        return
+
+    if deck.user_id != user.id:
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
+        return
+
+    # Toggle status
+    deck = await deck_service.toggle_deck_active(deck)
+
+    # Show confirmation
+    await callback.answer(
+        deck_msg.get_deck_toggle_message(deck.name, deck.is_active),
+        show_alert=True,
+    )
+
+    # Refresh deck details view
+    deck, card_count = await deck_service.get_deck_with_stats(deck_id)
+    text = deck_msg.get_deck_details_message(deck.name, deck.description, card_count)
+    await callback.message.edit_text(
+        text, reply_markup=get_deck_actions_keyboard(deck_id, deck.is_active)
+    )
 
 
 @router.message(F.text == common_msg.BTN_CANCEL, StateFilter("*"))

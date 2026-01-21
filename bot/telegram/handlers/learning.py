@@ -13,8 +13,8 @@ from bot.messages import common as common_msg
 from bot.messages import learning as learn_msg
 from bot.services.deck_service import DeckService
 from bot.services.learning_service import LearningService
-from bot.telegram.keyboards.deck_keyboards import get_deck_list_keyboard
 from bot.telegram.keyboards.learning_keyboards import (
+    get_deck_selection_keyboard,
     get_quality_rating_keyboard,
     get_session_end_keyboard,
     get_show_answer_keyboard,
@@ -35,7 +35,7 @@ async def start_learning_deck_selection(message: Message, session: AsyncSession,
         user: User instance
     """
     deck_service = DeckService(session)
-    decks = await deck_service.get_user_decks(user.id)
+    decks = await deck_service.get_user_decks_sorted(user.id)
 
     if not decks:
         await message.answer(
@@ -44,11 +44,66 @@ async def start_learning_deck_selection(message: Message, session: AsyncSession,
         )
         return
 
-    keyboard = get_deck_list_keyboard(decks)
-    await message.answer(learn_msg.MSG_SELECT_DECK_FOR_LEARNING, reply_markup=keyboard)
+    has_active = await deck_service.has_active_decks(user.id)
+
+    if has_active:
+        text = learn_msg.MSG_SELECT_DECK_OR_ALL
+    else:
+        text = learn_msg.MSG_SELECT_DECK_FOR_LEARNING
+
+    keyboard = get_deck_selection_keyboard(decks, show_learn_all=has_active)
+    await message.answer(text, reply_markup=keyboard)
 
 
-@router.callback_query(F.data.startswith("learn:"))
+@router.callback_query(F.data == "learn:all")
+async def start_learn_all_session(
+    callback: CallbackQuery, session: AsyncSession, state: FSMContext, user: User
+):
+    """Start a learning session for all active decks.
+
+    Args:
+        callback: Callback query
+        session: Database session
+        state: FSM state
+        user: User instance
+    """
+    deck_service = DeckService(session)
+    learning_service = LearningService(session)
+
+    # Get active deck IDs
+    active_decks = await deck_service.get_active_decks(user.id)
+    deck_ids = [deck.id for deck in active_decks]
+
+    if not deck_ids:
+        await callback.message.edit_text(learn_msg.MSG_ALL_DECKS_CARDS_REVIEWED)
+        await callback.answer()
+        return
+
+    # Get learning session cards from all active decks
+    session_cards = await learning_service.get_all_decks_learning_session(deck_ids, max_cards=20)
+
+    if not session_cards:
+        await callback.message.edit_text(learn_msg.MSG_ALL_DECKS_CARDS_REVIEWED)
+        await callback.answer()
+        return
+
+    # Store session data in state
+    card_ids = [card.id for card in session_cards]
+    await state.update_data(
+        deck_id=None,  # None indicates "all decks" mode
+        deck_ids=deck_ids,
+        card_ids=card_ids,
+        current_index=0,
+        cards_reviewed=0,
+        correct_count=0,
+        is_all_decks_mode=True,
+    )
+
+    # Show first card
+    await show_card_front(callback, state, session)
+
+
+@router.callback_query(F.data.startswith("learn:") & ~(F.data == "learn:all"))
 async def start_learning_session(
     callback: CallbackQuery, session: AsyncSession, state: FSMContext, user: User
 ):
@@ -83,6 +138,7 @@ async def start_learning_session(
         current_index=0,
         cards_reviewed=0,
         correct_count=0,
+        is_all_decks_mode=False,
     )
 
     # Show first card
@@ -272,9 +328,10 @@ async def continue_learning(callback: CallbackQuery, session: AsyncSession, user
         user: User instance
     """
     deck_service = DeckService(session)
-    decks = await deck_service.get_user_decks(user.id)
+    decks = await deck_service.get_user_decks_sorted(user.id)
+    has_active = await deck_service.has_active_decks(user.id)
 
-    keyboard = get_deck_list_keyboard(decks)
+    keyboard = get_deck_selection_keyboard(decks, show_learn_all=has_active)
     await callback.message.edit_text(learn_msg.MSG_CONTINUE_LEARNING, reply_markup=keyboard)
     await callback.answer()
 

@@ -184,3 +184,128 @@ class CardRepository(BaseRepository[Card]):
         )
         result = await self.session.execute(query)
         return list(result.tuples().all())
+
+    async def get_due_cards_from_decks(
+        self,
+        deck_ids: list[int],
+        limit: int | None = None,
+        current_time: datetime | None = None,
+    ) -> list[Card]:
+        """Get cards due for review from multiple decks.
+
+        Args:
+            deck_ids: List of deck IDs
+            limit: Maximum number of cards to return
+            current_time: Current time (defaults to now)
+
+        Returns:
+            List of due cards, ordered by next_review (oldest first)
+        """
+        if not deck_ids:
+            return []
+
+        if current_time is None:
+            current_time = datetime.now(UTC)
+
+        query = (
+            select(Card)
+            .where(
+                Card.deck_id.in_(deck_ids),
+                Card.next_review <= current_time,
+                Card.repetitions > 0,
+            )
+            .order_by(Card.next_review.asc())
+        )
+
+        if limit is not None:
+            query = query.limit(limit)
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_new_cards_from_decks(
+        self,
+        deck_ids: list[int],
+        limit: int | None = None,
+    ) -> list[Card]:
+        """Get new cards (never reviewed) from multiple decks.
+
+        Args:
+            deck_ids: List of deck IDs
+            limit: Maximum number of cards to return
+
+        Returns:
+            List of new cards
+        """
+        if not deck_ids:
+            return []
+
+        query = (
+            select(Card)
+            .where(
+                Card.deck_id.in_(deck_ids),
+                Card.repetitions == 0,
+            )
+            .order_by(Card.created_at.asc())
+        )
+
+        if limit is not None:
+            query = query.limit(limit)
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def count_due_cards_from_decks(
+        self,
+        deck_ids: list[int],
+        current_time: datetime | None = None,
+    ) -> int:
+        """Count cards due for review from multiple decks.
+
+        Args:
+            deck_ids: List of deck IDs
+            current_time: Current time (defaults to now)
+
+        Returns:
+            Number of due cards
+        """
+        if not deck_ids:
+            return 0
+
+        if current_time is None:
+            current_time = datetime.now(UTC)
+
+        query = (
+            select(func.count())
+            .select_from(Card)
+            .where(
+                Card.deck_id.in_(deck_ids),
+                Card.next_review <= current_time,
+                Card.repetitions > 0,
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()
+
+    async def count_new_cards_from_decks(self, deck_ids: list[int]) -> int:
+        """Count new cards from multiple decks.
+
+        Args:
+            deck_ids: List of deck IDs
+
+        Returns:
+            Number of new cards
+        """
+        if not deck_ids:
+            return 0
+
+        query = (
+            select(func.count())
+            .select_from(Card)
+            .where(
+                Card.deck_id.in_(deck_ids),
+                Card.repetitions == 0,
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()

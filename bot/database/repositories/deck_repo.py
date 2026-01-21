@@ -86,3 +86,48 @@ class DeckRepository(BaseRepository[Deck]):
         query = select(func.count()).select_from(Deck).where(Deck.user_id == user_id)
         result = await self.session.execute(query)
         return result.scalar_one()
+
+    async def get_user_decks_sorted(self, user_id: int) -> list[Deck]:
+        """Get all decks for a user, sorted by is_active (active first), then by name.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of deck instances, active first
+        """
+        query = (
+            select(Deck).where(Deck.user_id == user_id).order_by(Deck.is_active.desc(), Deck.name)
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_user_active_decks(self, user_id: int) -> list[Deck]:
+        """Get all active decks for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of active deck instances
+        """
+        query = select(Deck).where(Deck.user_id == user_id, Deck.is_active == True)  # noqa: E712
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def count_active_decks(self, user_id: int) -> int:
+        """Count active decks for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Number of active decks
+        """
+        query = (
+            select(func.count())
+            .select_from(Deck)
+            .where(Deck.user_id == user_id, Deck.is_active == True)  # noqa: E712
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()

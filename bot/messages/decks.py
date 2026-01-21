@@ -116,3 +116,44 @@ BTN_VIEW_CARDS = "Просмотр карточек"
 BTN_EDIT_DECK = "Редактировать колоду"
 BTN_DELETE_DECK = "Удалить колоду"
 BTN_CONFIRM_DELETE = "Да, удалить"
+BTN_ENABLE_DECK = "Включить колоду"
+BTN_DISABLE_DECK = "Отключить колоду"
+
+# Deck status labels
+LABEL_DECK_DISABLED = "(отключена)"
+
+# Deck toggle messages
+MSG_DECK_ENABLED = "Колода <b>{name}</b> включена.\nОна будет участвовать в режиме 'Учить все'."
+MSG_DECK_DISABLED = (
+    "Колода <b>{name}</b> отключена.\nОна не будет участвовать в режиме 'Учить все'."
+)
+
+
+def get_deck_display_name(name: str, is_active: bool) -> str:
+    """Get deck display name with status label if disabled.
+
+    Args:
+        name: Deck name
+        is_active: Whether deck is active
+
+    Returns:
+        Display name with optional label
+    """
+    if is_active:
+        return name
+    return f"{name} {LABEL_DECK_DISABLED}"
+
+
+def get_deck_toggle_message(name: str, is_now_active: bool) -> str:
+    """Get message for deck toggle action.
+
+    Args:
+        name: Deck name
+        is_now_active: New active status
+
+    Returns:
+        Toggle confirmation message
+    """
+    if is_now_active:
+        return MSG_DECK_ENABLED.format(name=html.escape(name))
+    return MSG_DECK_DISABLED.format(name=html.escape(name))

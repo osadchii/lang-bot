@@ -202,3 +202,41 @@ class LearningService:
             "due_cards": due_cards,
             "learning_cards": total_cards - new_cards,
         }
+
+    async def get_all_decks_learning_session(
+        self,
+        deck_ids: list[int],
+        max_cards: int = DEFAULT_CARDS_PER_SESSION,
+        max_new_cards: int = MAX_NEW_CARDS_PER_DAY,
+    ) -> list[Card]:
+        """Get cards for a learning session from multiple decks.
+
+        Cards are selected by SRS priority (most overdue first).
+
+        Args:
+            deck_ids: List of deck IDs to include
+            max_cards: Maximum total cards
+            max_new_cards: Maximum new cards to include
+
+        Returns:
+            List of cards for the session
+        """
+        if not deck_ids:
+            return []
+
+        # Get new and due cards from all specified decks
+        new_cards = await self.card_repo.get_new_cards_from_decks(deck_ids, limit=max_new_cards)
+        due_cards = await self.card_repo.get_due_cards_from_decks(deck_ids, limit=max_cards)
+
+        # Prioritize due cards
+        due_cards = prioritize_cards(due_cards)
+
+        # Mix new and review cards
+        session_cards = mix_new_and_review_cards(
+            new_cards=new_cards,
+            review_cards=due_cards,
+            new_cards_limit=max_new_cards,
+            total_limit=max_cards,
+        )
+
+        return session_cards
