@@ -48,17 +48,18 @@ def get_deck_selection_keyboard(
             name = f"* {name}"
         builder.button(text=name, callback_data=f"trans_deck:{deck.id}")
 
-    # Option to create new deck
+    # Option to create new deck with AI-suggested name
     if suggested_new_name:
         builder.button(
             text=f"+ {suggested_new_name}",
             callback_data=f"trans_new:{suggested_new_name[:30]}",
         )
-    else:
-        builder.button(
-            text=trans_msg.BTN_CREATE_NEW_DECK,
-            callback_data="trans_new_custom",
-        )
+
+    # Always show option to create deck with custom name
+    builder.button(
+        text=trans_msg.BTN_CREATE_NEW_DECK,
+        callback_data="trans_new_custom",
+    )
 
     # Skip option
     builder.button(text=trans_msg.BTN_SKIP, callback_data="trans_skip")
