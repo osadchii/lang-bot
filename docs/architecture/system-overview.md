@@ -76,6 +76,7 @@ Services implement core business logic and coordinate between repositories:
 - `ConversationService`: AI conversation history management
 - `TranslationService`: Smart translation with card lookup and deck suggestions
 - `MessageCategorizationService`: AI-powered message intent detection
+- `ExerciseService`: Grammar exercises (tenses, conjugations, cases) with AI task generation
 
 **Pattern**: Each service receives `AsyncSession` in `__init__` and creates repositories.
 

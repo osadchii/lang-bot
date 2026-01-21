@@ -3,6 +3,7 @@
 # Main menu buttons
 BTN_MY_DECKS = "Мои колоды"
 BTN_LEARN = "Учить"
+BTN_EXERCISES = "Упражнения"
 BTN_ADD_CARD = "Добавить карточку"
 BTN_STATISTICS = "Статистика"
 BTN_CANCEL = "Отмена"

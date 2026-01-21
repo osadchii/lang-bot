@@ -62,6 +62,7 @@ def setup_handlers(dp: Dispatcher) -> None:
         card_management,
         deck_management,
         errors,
+        exercises,
         learning,
         start,
         statistics,
@@ -74,6 +75,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     dp.include_router(deck_management.router)
     dp.include_router(card_management.router)
     dp.include_router(learning.router)
+    dp.include_router(exercises.router)  # Grammar exercises
     dp.include_router(translation.router)  # Callbacks only
     dp.include_router(ai_chat.router)  # Commands only (/translate, /grammar, /clear_history)
     dp.include_router(unified_message.router)  # AI-powered message categorization
