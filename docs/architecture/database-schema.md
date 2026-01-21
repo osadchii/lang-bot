@@ -92,6 +92,25 @@ The database uses **PostgreSQL** with **SQLAlchemy 2.0** async ORM. All models i
 │ created_at                  │
 │ updated_at                  │
 └─────────────────────────────┘
+
+         User
+         │
+         │ 1
+         │
+         ▼ N
+┌─────────────────────────────┐
+│   ConversationMessage       │
+│─────────────────────────────│
+│ id (PK)                     │
+│ user_id (FK)                │
+│ conversation_id             │
+│ role                        │
+│ content                     │
+│ message_type                │
+│ token_count                 │
+│ created_at                  │
+│ updated_at                  │
+└─────────────────────────────┘
 ```
 
 ## Table Definitions
@@ -263,6 +282,40 @@ Daily statistics per user per deck.
 - `accuracy`: Calculated property (correct_answers / total_answers * 100)
 
 **File**: `bot/database/models/learning_stats.py`
+
+---
+
+### ConversationMessage
+
+Stores AI conversation history for context-aware responses.
+
+| Column          | Type     | Constraints | Description                     |
+|-----------------|----------|-------------|---------------------------------|
+| id              | Integer  | PK          | Auto-increment primary key      |
+| user_id         | Integer  | FK, NOT NULL | Reference to User              |
+| conversation_id | String   | NOT NULL    | Conversation identifier (default: "default") |
+| role            | String   | NOT NULL    | Message role (user/assistant/system) |
+| content         | Text     | NOT NULL    | Message content                 |
+| message_type    | String   | NULL        | Type of interaction (ask_question, translate, etc.) |
+| token_count     | Integer  | NULL        | Optional token usage tracking   |
+| created_at      | DateTime | NOT NULL    | Creation timestamp              |
+| updated_at      | DateTime | NOT NULL    | Last update timestamp           |
+
+**Indexes**:
+- Primary key on `id`
+- Foreign key on `user_id`
+- Index on `conversation_id`
+- Index on `user_id`
+
+**Relationships**:
+- `user`: Many-to-One with User
+
+**Constraints**:
+- CASCADE DELETE on user deletion
+
+**File**: `bot/database/models/conversation.py`
+
+---
 
 ## Database Constraints Summary
 
@@ -473,5 +526,5 @@ pg_restore -d langbot backup_20260120.dump
 
 ---
 
-**Last Updated**: 2026-01-20
+**Last Updated**: 2026-01-21
 **Maintained by**: Documentation Agent

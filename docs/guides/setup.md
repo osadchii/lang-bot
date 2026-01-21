@@ -142,10 +142,11 @@ You should see output like:
 
 ### 3. Test Basic Functionality
 
-- **Create Deck**: Use "📚 My Decks" → "Create New Deck"
-- **Add Card**: Use "➕ Add Card" → Select deck → Choose method
-- **Learn**: Use "📖 Learn" → Select deck → Review cards
-- **AI Assistant**: Use "🤖 AI Assistant" → Ask a question
+- **Create Deck**: Use "My Decks" button, then "Create New Deck"
+- **Add Card**: Use "Add Card" button, select deck, enter word
+- **Learn**: Use "Learn" button, select deck, review cards
+- **Smart Translation**: Type any word (Greek or Russian) - bot will translate and offer to add as card
+- **AI Questions**: Type any question in Russian about Greek language
 
 ## Troubleshooting
 

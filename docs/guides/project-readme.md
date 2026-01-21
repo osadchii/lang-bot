@@ -1,11 +1,14 @@
 # Greek Language Learning Telegram Bot
 
-A Telegram bot for learning Greek with AI-powered assistance and spaced repetition system (SRS).
+A Telegram bot for **Russian-speaking users** learning Greek with AI-powered assistance and spaced repetition system (SRS).
 
 ## Features
 
+- **AI-Powered Message Understanding**: Just type naturally - the bot understands what you want
+- **Smart Translation**: Translate words, automatically check for existing cards, suggest appropriate decks
+- **Conversation History**: AI remembers context for more natural multi-turn conversations
 - **Spaced Repetition System**: Uses the SM-2 algorithm for optimal learning retention
-- **AI Assistant**: Powered by OpenAI GPT-4 for translations, grammar explanations, and card generation
+- **AI Card Generation**: Generate cards from Greek or Russian words with examples
 - **Deck Management**: Organize your learning materials into customizable decks
 - **Learning Statistics**: Track your progress and learning streaks
 - **Interactive Learning**: Review cards with immediate feedback and intelligent scheduling
@@ -74,11 +77,15 @@ python -m bot
 ### Available Commands
 
 - `/start` - Start the bot and register
-- `/help` - Show help information
-- `/decks` - Manage your decks
-- `/learn` - Start a learning session
-- `/stats` - View your learning statistics
-- `/ai` - Chat with AI assistant
+
+### Natural Language Interaction
+
+Instead of commands, simply type:
+- **Any Greek or Russian word** - Bot translates and offers to add as card
+- **Any question in Russian** - Bot answers with context from conversation history
+- **Sentences for translation** - Bot detects and translates text/phrases
+
+The bot uses AI to understand your intent and route to the appropriate feature.
 
 ## Project Structure
 

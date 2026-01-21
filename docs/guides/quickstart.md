@@ -69,10 +69,17 @@ python -m bot
 
 ## First Steps in the Bot
 
-1. **Create a Deck**: Tap "📚 My Decks" → "Create New Deck"
-2. **Add Cards**: Tap "➕ Add Card" → Choose deck → Add Greek words
-3. **Start Learning**: Tap "📖 Learn" → Select deck → Review cards
-4. **Try AI**: Tap "🤖 AI Assistant" → Ask "How do you say 'good morning' in Greek?"
+1. **Create a Deck**: Tap "My Decks" button, then "Create New Deck"
+2. **Add Cards**: Tap "Add Card" button, choose a deck, then enter a word
+3. **Start Learning**: Tap "Learn" button, select a deck, and review cards
+4. **Try Translation**: Simply type any Greek or Russian word - the bot will translate it and offer to add it as a card
+5. **Ask Questions**: Type any language question in Russian - the bot understands context and remembers your conversation
+
+**Smart Translation Flow**:
+- Type a word like "σπίτι" or "дом"
+- Bot translates and checks if you already have this card
+- If not, suggests the best deck or offers to create a new one
+- One tap to add the card with AI-generated example
 
 ## Troubleshooting
 
@@ -95,4 +102,4 @@ python -m bot
 - Check [README.md](README.md) for features overview
 - See [PROJECT_STATUS.md](PROJECT_STATUS.md) for implementation details
 
-Happy learning Greek! 🇬🇷
+Happy learning Greek!

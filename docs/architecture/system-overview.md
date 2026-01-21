@@ -4,6 +4,8 @@
 
 The Greek Language Learning Bot is built using a **layered architecture** with clear separation of concerns. The system follows modern async Python patterns and integrates Telegram Bot API, PostgreSQL, and OpenAI API.
 
+**Target Audience**: Russian-speaking users learning Greek. All UI and AI responses are in Russian.
+
 ## High-Level Architecture
 
 ```
@@ -70,7 +72,10 @@ Services implement core business logic and coordinate between repositories:
 - `CardService`: Card management
 - `LearningService`: Learning sessions, SRS algorithm
 - `StatisticsService`: Analytics and reporting
-- `AIService`: OpenAI API integration
+- `AIService`: OpenAI API integration (translations, grammar, card generation, message categorization)
+- `ConversationService`: AI conversation history management
+- `TranslationService`: Smart translation with card lookup and deck suggestions
+- `MessageCategorizationService`: AI-powered message intent detection
 
 **Pattern**: Each service receives `AsyncSession` in `__init__` and creates repositories.
 
@@ -99,8 +104,10 @@ SQLAlchemy ORM models with relationships:
 
 ```
 User (1) ──→ (N) Deck (1) ──→ (N) Card (1) ──→ (N) Review
-  ↓
-  └──→ (N) LearningStats
+  │
+  ├──→ (N) LearningStats
+  │
+  └──→ (N) ConversationMessage
 ```
 
 All relationships use `ondelete="CASCADE"` for referential integrity.
@@ -112,6 +119,7 @@ All relationships use `ondelete="CASCADE"` for referential integrity.
 - `spaced_repetition.py`: SM-2 algorithm implementation
 - `card_scheduler.py`: Card selection and prioritization
 - `constants.py`: Algorithm constants and configuration
+- `message_categories.py`: Message categorization types and intents
 
 ## Request Flow
 
@@ -173,6 +181,46 @@ Middlewares execute **in order** (defined in `bot/telegram/bot.py:44-47`):
 - Sets `user_created: bool` flag
 
 **Result**: Every handler receives `session` and `user` automatically.
+
+### Example: User Sends Free-Text Message
+
+The bot uses AI-powered message categorization to handle free-text input:
+
+1. **User Input**: User sends any text message (e.g., "как переводится σπίτι")
+   ```
+   Message(text="как переводится σπίτι")
+   ```
+
+2. **Middleware Chain**: Same as above, injects `session` and `user`
+
+3. **Handler** (`unified_message.py:handle_message`):
+   - Checks message is not a command or menu button
+   - Shows "thinking" indicator
+   - Calls `MessageCategorizationService`
+
+4. **AI Categorization** (`MessageCategorizationService.categorize_message`):
+   - Sends message to OpenAI for intent classification
+   - Returns `CategorizationResult` with:
+     - Category: `WORD_TRANSLATION`, `TEXT_TRANSLATION`, `LANGUAGE_QUESTION`, or `UNKNOWN`
+     - Confidence: 0.0-1.0
+     - Intent: Extracted data (word, text, or question)
+   - Falls back to regex patterns if AI fails
+
+5. **Route to Handler**:
+   - `WORD_TRANSLATION`: Translate word, check for existing cards, offer to add
+   - `TEXT_TRANSLATION`: Translate sentence/phrase
+   - `LANGUAGE_QUESTION`: Answer using AI with conversation history
+
+6. **Translation with Card Check** (for word translation):
+   - `TranslationService.translate_with_card_check()`:
+     - Calls AIService for translation
+     - Searches user's cards for existing entry
+     - If not found, suggests appropriate deck or new deck name
+
+7. **Conversation History** (for questions):
+   - `ConversationService.get_context_messages()`: Gets recent conversation
+   - `AIService.ask_question()`: Answers with context
+   - Stores response in conversation history
 
 ## Design Patterns
 
@@ -397,5 +445,5 @@ Extend `AIService` in `bot/services/ai_service.py`:
 
 ---
 
-**Last Updated**: 2026-01-20
+**Last Updated**: 2026-01-21
 **Maintained by**: Documentation Agent

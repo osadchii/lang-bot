@@ -4,6 +4,8 @@
 
 Services contain business logic and orchestrate operations between handlers and repositories. All services follow the same initialization pattern: they receive `AsyncSession` and create necessary repositories.
 
+**Note**: This bot is designed for **Russian-speaking users** learning **Greek**. All AI prompts and responses are in Russian.
+
 ## Common Pattern
 
 ```python
@@ -217,57 +219,390 @@ print(f"Total: {stats['total_cards']}, Due: {stats['due_cards']}")
 
 **File**: `bot/services/ai_service.py`
 
-OpenAI API integration for AI-powered features.
+OpenAI API integration for AI-powered features. All responses are in Russian for Russian-speaking users.
 
 ### Methods
 
-#### `ask_question(message: str, context: str = None) -> str`
+#### `ask_question(message: str, context: str = None, conversation_history: list[dict[str, str]] = None) -> str`
 
-Ask a question to the AI assistant.
+Ask a question to the AI assistant with optional conversation history.
 
 **Parameters**:
 - `message` (str): User's question
-- `context` (str, optional): Additional context
+- `context` (str, optional): Additional context (legacy support)
+- `conversation_history` (list, optional): List of previous messages `[{"role": "user/assistant", "content": "..."}]`
 
-**Returns**: AI's response as string
+**Returns**: AI's response as string (in Russian)
 
 **Example**:
 ```python
 ai_service = AIService()
+
+# Simple question
 response = await ai_service.ask_question(
-    "What is the difference between και and αλλά?"
+    "В чем разница между και и αλλά?"
+)
+
+# With conversation history
+history = [
+    {"role": "user", "content": "Как сказать 'привет'?"},
+    {"role": "assistant", "content": "Γεια σου (ghia su) - неформальное приветствие"}
+]
+response = await ai_service.ask_question(
+    "А как сказать 'до свидания'?",
+    conversation_history=history
 )
 ```
 
-#### `translate_word(word: str, from_lang: str = "greek", to_lang: str = "english") -> str`
+#### `translate_word(word: str, from_lang: str = "greek", to_lang: str = "russian") -> str`
 
-Translate a word or phrase.
+Translate a word or phrase between Greek and Russian.
+
+**Parameters**:
+- `word` (str): Word or phrase to translate
+- `from_lang` (str): Source language ('greek' or 'russian')
+- `to_lang` (str): Target language ('greek' or 'russian')
+
+**Returns**: Translation with context (in Russian)
 
 **Example**:
 ```python
+# Greek to Russian
 translation = await ai_service.translate_word("καλημέρα")
-# Returns: "Good morning (formal greeting)"
+# Returns: "Доброе утро (формальное приветствие)"
+
+# Russian to Greek
+translation = await ai_service.translate_word("привет", from_lang="russian", to_lang="greek")
+# Returns: "Γεια σου (ghia su) - неформальное приветствие"
 ```
 
 #### `explain_grammar(text: str) -> str`
 
-Explain the grammar of Greek text.
+Explain the grammar of Greek text in Russian.
+
+**Parameters**:
+- `text` (str): Greek text to explain
+
+**Returns**: Grammar explanation in Russian
 
 **Example**:
 ```python
 explanation = await ai_service.explain_grammar("Το βιβλίο είναι ενδιαφέρον")
 ```
 
-#### `generate_card_from_word(word: str) -> dict[str, str]`
+#### `generate_card_from_word(word: str, source_language: str = "greek") -> dict[str, str]`
 
-Generate a flashcard from a Greek word using AI.
+Generate a flashcard from a word in Greek or Russian.
 
-**Returns**: Dictionary with keys: `front`, `back`, `example`
+**Parameters**:
+- `word` (str): Word to create card from
+- `source_language` (str): 'greek' or 'russian'
+
+**Returns**: Dictionary with keys:
+- `front`: Greek word with article (for nouns: ο/η/το)
+- `back`: Russian translation
+- `example`: Example sentence
 
 **Example**:
 ```python
+# From Greek word
 card_data = await ai_service.generate_card_from_word("αγάπη")
-# Returns: {"front": "αγάπη", "back": "love", "example": "..."}
+# Returns: {"front": "η αγάπη", "back": "любовь", "example": "..."}
+
+# From Russian word
+card_data = await ai_service.generate_card_from_word("дом", source_language="russian")
+# Returns: {"front": "το σπίτι", "back": "дом", "example": "..."}
+```
+
+#### `generate_example_sentence(word: str) -> str`
+
+Generate an example sentence using a Greek word.
+
+**Parameters**:
+- `word` (str): Greek word
+
+**Returns**: Example sentence with Russian translation
+
+**Example**:
+```python
+example = await ai_service.generate_example_sentence("σπίτι")
+```
+
+#### `suggest_deck_for_word(word: str, translation: str, deck_names: list[str]) -> str | None`
+
+Suggest the most suitable deck for a word from existing decks.
+
+**Parameters**:
+- `word` (str): Greek word
+- `translation` (str): Russian translation
+- `deck_names` (list[str]): List of user's existing deck names
+
+**Returns**: Best matching deck name or None if no suitable deck
+
+**Example**:
+```python
+suggested = await ai_service.suggest_deck_for_word(
+    word="το σπίτι",
+    translation="дом",
+    deck_names=["Еда", "Транспорт", "Дом и семья"]
+)
+# Returns: "Дом и семья"
+```
+
+#### `generate_deck_name(word: str, translation: str) -> str`
+
+Generate a suitable deck name for a word category.
+
+**Parameters**:
+- `word` (str): Greek word
+- `translation` (str): Russian translation
+
+**Returns**: Suggested deck name in Russian
+
+**Example**:
+```python
+name = await ai_service.generate_deck_name("το αυτοκίνητο", "автомобиль")
+# Returns: "Транспорт"
+```
+
+#### `categorize_message(message: str) -> dict`
+
+Categorize a user message to determine intent using AI.
+
+**Parameters**:
+- `message` (str): User's message text
+
+**Returns**: Dictionary with:
+- `category`: "word_translation" | "text_translation" | "language_question" | "unknown"
+- `confidence`: 0.0-1.0
+- `extracted_content`: Word/text/question extracted from message
+- `source_language`: "greek" | "russian" | null
+- `topic`: "grammar" | "vocabulary" | "pronunciation" | "usage" | null
+
+**Raises**: Exception if API call fails or response cannot be parsed
+
+**Example**:
+```python
+result = await ai_service.categorize_message("как переводится σπίτι")
+# Returns: {
+#     "category": "word_translation",
+#     "confidence": 0.95,
+#     "extracted_content": "σπίτι",
+#     "source_language": "greek",
+#     "topic": null
+# }
+```
+
+---
+
+## ConversationService
+
+**File**: `bot/services/conversation_service.py`
+
+Manages AI conversation history for context-aware responses.
+
+### Methods
+
+#### `add_user_message(user: User, content: str, conversation_id: str = "default", message_type: str = None) -> ConversationMessage`
+
+Add a user message to the conversation history.
+
+**Parameters**:
+- `user` (User): User model instance
+- `content` (str): Message content
+- `conversation_id` (str): Conversation identifier (default: "default")
+- `message_type` (str, optional): Type of interaction (e.g., "ask_question", "translate")
+
+**Returns**: Created ConversationMessage instance
+
+**Example**:
+```python
+conv_service = ConversationService(session)
+msg = await conv_service.add_user_message(
+    user=user,
+    content="Как сказать 'привет' по-гречески?",
+    message_type="ask_question"
+)
+```
+
+#### `add_assistant_message(user: User, content: str, conversation_id: str = "default", message_type: str = None, token_count: int = None) -> ConversationMessage`
+
+Add an assistant (AI) message to the conversation history.
+
+**Parameters**:
+- `user` (User): User model instance
+- `content` (str): Message content
+- `conversation_id` (str): Conversation identifier
+- `message_type` (str, optional): Type of interaction
+- `token_count` (int, optional): Optional token usage
+
+**Returns**: Created ConversationMessage instance
+
+#### `get_context_messages(user: User, conversation_id: str = "default", limit: int = None) -> list[dict[str, str]]`
+
+Get recent messages formatted for OpenAI API.
+
+**Parameters**:
+- `user` (User): User model instance
+- `conversation_id` (str): Conversation identifier
+- `limit` (int, optional): Number of messages (uses setting if not provided)
+
+**Returns**: List of message dicts with 'role' and 'content' keys
+
+**Example**:
+```python
+history = await conv_service.get_context_messages(user)
+# Returns: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+
+# Use with AIService
+response = await ai_service.ask_question(
+    message="А как сказать 'пока'?",
+    conversation_history=history
+)
+```
+
+#### `clear_conversation(user: User, conversation_id: str = "default") -> int`
+
+Clear conversation history for a user.
+
+**Parameters**:
+- `user` (User): User model instance
+- `conversation_id` (str): Conversation identifier
+
+**Returns**: Number of messages deleted
+
+#### `get_conversation_stats(user: User, conversation_id: str = "default") -> dict[str, int]`
+
+Get conversation statistics.
+
+**Returns**: Dictionary with `total_messages` count
+
+#### `cleanup_old_messages(days: int = None) -> int`
+
+Cleanup old messages across all users.
+
+**Parameters**:
+- `days` (int, optional): Age threshold (uses setting if not provided)
+
+**Returns**: Number of messages deleted
+
+---
+
+## TranslationService
+
+**File**: `bot/services/translation_service.py`
+
+Smart translation service that integrates with user's cards.
+
+### Data Classes
+
+#### `TranslationResult`
+
+Result of a translation request.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `word` | str | Original word |
+| `source_language` | str | 'greek' or 'russian' |
+| `translation` | str | AI translation response |
+| `existing_card` | Card \| None | Found card if exists |
+| `existing_deck` | Deck \| None | Deck containing the card |
+| `existing_count` | int | Number of decks containing the word |
+| `suggested_deck` | Deck \| None | AI-suggested deck for new card |
+| `suggested_deck_name` | str \| None | Suggested name if no suitable deck |
+
+#### `CardData`
+
+Data for creating a card from translation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `front` | str | Greek with article |
+| `back` | str | Russian translation |
+| `example` | str | Example sentence |
+
+### Methods
+
+#### `translate_with_card_check(user: User, word: str, source_language: str) -> TranslationResult`
+
+Translate word and check if it exists in user's cards.
+
+**Parameters**:
+- `user` (User): User making the request
+- `word` (str): Word to translate
+- `source_language` (str): 'greek' or 'russian'
+
+**Returns**: TranslationResult with all relevant data
+
+**Example**:
+```python
+trans_service = TranslationService(session)
+result = await trans_service.translate_with_card_check(
+    user=user,
+    word="σπίτι",
+    source_language="greek"
+)
+
+if result.existing_card:
+    print(f"Card exists in deck: {result.existing_deck.name}")
+else:
+    print(f"Suggested deck: {result.suggested_deck.name or result.suggested_deck_name}")
+```
+
+#### `generate_card_data(word: str, source_language: str) -> CardData`
+
+Generate card data from a word.
+
+**Parameters**:
+- `word` (str): Word to create card from
+- `source_language` (str): 'greek' or 'russian'
+
+**Returns**: CardData with front, back, and example
+
+**Example**:
+```python
+card_data = await trans_service.generate_card_data("привет", "russian")
+# card_data.front = "γεια σου"
+# card_data.back = "привет"
+# card_data.example = "Γεια σου, τι κάνεις;"
+```
+
+---
+
+## MessageCategorizationService
+
+**File**: `bot/services/message_categorization_service.py`
+
+AI-powered message categorization for intent detection.
+
+### Methods
+
+#### `categorize_message(message: str) -> CategorizationResult`
+
+Categorize a user message using AI.
+
+**Parameters**:
+- `message` (str): User's message text
+
+**Returns**: CategorizationResult with category, confidence, and intent data
+
+**Categories**:
+- `WORD_TRANSLATION`: Single word translation request
+- `TEXT_TRANSLATION`: Sentence/phrase translation
+- `LANGUAGE_QUESTION`: Grammar or language usage question
+- `UNKNOWN`: Could not determine intent
+
+**Example**:
+```python
+categorization_service = MessageCategorizationService()
+result = await categorization_service.categorize_message("как переводится дом")
+
+if result.category == MessageCategory.WORD_TRANSLATION:
+    intent = result.intent  # WordTranslationIntent
+    print(f"Translate word: {intent.word} from {intent.source_language}")
+elif result.category == MessageCategory.LANGUAGE_QUESTION:
+    intent = result.intent  # LanguageQuestionIntent
+    print(f"Question: {intent.question}, topic: {intent.topic}")
 ```
 
 ---
@@ -332,8 +667,9 @@ except ValueError:
 - [Repository API](./repositories.md) - Data access layer
 - [Service Layer Architecture](../architecture/service-layer.md) - Design patterns
 - [Handler Reference](./handlers.md) - How handlers use services
+- [Message Categories](../architecture/message-categories.md) - Categorization types
 
 ---
 
-**Last Updated**: 2026-01-20
+**Last Updated**: 2026-01-21
 **Maintained by**: Documentation Agent

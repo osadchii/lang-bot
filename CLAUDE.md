@@ -1,197 +1,55 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-Greek language learning Telegram bot for **Russian-speaking users** built with:
-- **aiogram 3.x** - Telegram bot framework
-- **SQLAlchemy 2.0** with async (asyncpg) - PostgreSQL
-- **OpenAI API** - AI-powered features (Russian prompts, Greek-Russian translation)
-- **SM-2 algorithm** - Spaced repetition system
-
-### Target Audience
-- **Native language**: Russian
-- **Learning language**: Greek
-- **UI language**: Russian
+Greek language learning Telegram bot for **Russian-speaking users**:
+- **aiogram 3.x** + **SQLAlchemy 2.0** async (asyncpg) + **OpenAI API**
+- **SM-2 algorithm** for spaced repetition
 - **Card format**: Greek (front with article) / Russian (back)
 
-## Rules and Guidelines
+## Rules
 
-**CRITICAL**: All development rules are in `.claude/rules/`:
+All rules in `.claude/rules/`:
+- **constraints.md** - NON-NEGOTIABLE (layer separation, SRS, sessions)
+- **architecture.md** - Layers, middleware, FSM, routers
+- **development.md** - Code style, async, error handling
+- **testing.md** - Coverage, fixtures, patterns
+- **delegation.md** - Agent workflows
+- **documentation.md** - Docs structure
+- **deployment.md** - Migrations, CI/CD
 
-- **[constraints.md](./.claude/rules/constraints.md)** - NON-NEGOTIABLE constraints
-- **[architecture.md](./.claude/rules/architecture.md)** - Architecture patterns
-- **[development.md](./.claude/rules/development.md)** - Development guidelines
-- **[testing.md](./.claude/rules/testing.md)** - Testing requirements
-- **[delegation.md](./.claude/rules/delegation.md)** - Agent delegation rules
-- **[documentation.md](./.claude/rules/documentation.md)** - Documentation rules
-- **[deployment.md](./.claude/rules/deployment.md)** - Deployment procedures
+**Read before making changes.**
 
-**READ THESE FILES BEFORE MAKING CHANGES**.
+## Commands
 
-## Essential Commands
-
-### Development Workflow (Makefile)
 ```bash
-make verify        # Full verification before push (lint, format, typecheck, tests)
-make fix           # Auto-fix linting and formatting issues
-make check         # Run all checks without fixing
-make pre-commit    # Install pre-commit hooks
+make verify      # Full check before push
+make fix         # Auto-fix lint/format
+python -m bot    # Run bot
+alembic upgrade head  # Apply migrations
 ```
 
-### Individual Commands
-```bash
-make lint          # Run ruff linter
-make format        # Format code with black
-make typecheck     # Run mypy type checking
-make test          # Run tests
-make test-cov      # Run tests with coverage report
-```
+## Key Patterns
 
-### Run Bot
-```bash
-python -m bot
-```
+**Layer structure**: `Handlers -> Services -> Repositories -> Models`
 
-### Database Migrations
-```bash
-alembic revision --autogenerate -m "description"  # Create migration
-alembic upgrade head                              # Apply migrations
-alembic downgrade -1                              # Rollback
-```
+**Middleware injects**: `session: AsyncSession`, `user: User`, `user_created: bool`
 
-## Critical Architecture Rules
+**SRS**: Never modify card fields directly, use `calculate_next_review()`
 
-### Layer Structure (STRICT)
-```
-Handlers → Services → Repositories → Models
-```
+**FSM**: Always `await state.clear()` when done
 
-**NEVER skip layers**. See [constraints.md](./.claude/rules/constraints.md).
-
-### Middleware Chain
-1. LoggingMiddleware
-2. ThrottlingMiddleware
-3. DatabaseMiddleware (injects `session`)
-4. UserContextMiddleware (injects `user`)
-
-Every handler receives: `session: AsyncSession`, `user: User`, `user_created: bool`
-
-### Spaced Repetition System
-
-- Algorithm: `bot/core/spaced_repetition.py`
-- **NEVER** modify SRS fields directly
-- Use `calculate_next_review()` function
-- Process via `LearningService.process_card_review()`
-
-### Database Sessions
-
-- **NEVER** create sessions manually in handlers
-- Use injected `session` from DatabaseMiddleware
-- Manual sessions only in scripts/tests
-
-### FSM (Finite State Machine)
-
-1. Define states in `bot/telegram/states/`
-2. Start: `await state.set_state(...)`
-3. Store: `await state.update_data(...)`
-4. Retrieve: `await state.get_data()`
-5. **CRITICAL**: `await state.clear()` when done
-
-### Configuration
-
-- All config from `.env` via `bot/config/settings.py`
-- Required: `TELEGRAM_BOT_TOKEN`, `DATABASE_URL`, `OPENAI_API_KEY`
-- Access: `from bot.config.settings import settings`
-
-## Database Models
-
-### Relationships
-```
-User (1) → (N) Deck (1) → (N) Card (1) → (N) Review
-  ↓
-  └→ (N) LearningStats
-```
-
-### SRS Fields on Card
-- `ease_factor`, `interval`, `repetitions`, `next_review`
-- **NEVER modify directly** - use `calculate_next_review()`
+**Config**: `from bot.config.settings import settings`
 
 ## Adding Features
 
-### New Handler
-1. Create in `bot/telegram/handlers/my_feature.py`
-2. Create router: `router = Router(name="my_feature")`
-3. Register in `bot/telegram/bot.py`
+- **Handler**: Create in `bot/telegram/handlers/`, register in `bot/telegram/bot.py`
+- **Model change**: Create migration with `alembic revision --autogenerate -m "..."`
+- **AI**: Use `AIService` methods (`ask_question`, `translate_word`, `generate_card_from_word`)
+- **Messages**: All UI text in `bot/messages/`, escape user content with `html.escape()`
 
-### Model Changes
-1. Modify model in `bot/database/models/`
-2. Create migration: `alembic revision --autogenerate -m "..."`
-3. Review migration
-4. Apply: `alembic upgrade head`
+## Documentation
 
-### AI Features
-Use `AIService` from `bot/services/ai_service.py`:
-- `ask_question()` - General AI questions (Russian responses)
-- `translate_word()` - Greek-Russian bidirectional translation
-- `explain_grammar()` - Grammar explanations in Russian
-- `generate_card_from_word(word, source_language)` - Create card from Greek OR Russian word
-  - Accepts `source_language='greek'` or `source_language='russian'`
-  - Always adds Greek articles (o, n, to) for nouns
-
-### Messages Module
-All UI text is centralized in `bot/messages/`:
-- `common.py` - Shared buttons and error messages
-- `start.py`, `decks.py`, `cards.py`, `learning.py`, `statistics.py`, `ai.py`
-- All functions that display user content use `html.escape()` for security
-
-### Language Detection
-Use `bot/utils/language_detector.py`:
-- `detect_language(text)` - Returns 'greek', 'russian', or 'unknown'
-- `is_greek(text)`, `is_russian(text)` - Boolean checks
-
-## Code Style
-
-- Black formatting (line length: 100)
-- Ruff linting
-- **NO emojis** in codebase
-- **NO commented-out code**
-- **NO unused imports/variables**
-- Type hints everywhere
-- Modern syntax: `str | None` not `Optional[str]`
-
-## Important Patterns
-
-### Async Everywhere
-- `async def` for functions
-- `await` for I/O operations
-- `AsyncSession` for database
-- `async with` for context managers
-
-### Error Handling
-- Handle expected errors explicitly
-- Let global handler catch unexpected errors
-- Never silent error swallowing
-- User-friendly messages only
-
-### HTML Formatting
-- Bot uses HTML parse mode
-- Escape user content: `html.escape()`
-- Tags: `<b>`, `<i>`, `<code>`, `<pre>`, `<a>`
-
-### Callback Data
-- Format: `"action:id:extra"`
-- Parse: `callback.data.split(":")`
-
-## Entry Point
-
-```bash
-python -m bot  # Executes bot/__main__.py
-```
-
-Startup: Logging → Bot/Dispatcher → Middlewares → Handlers → Commands → Polling
-
----
-
-**For detailed rules, see `.claude/rules/*.md`**
+All docs in `/docs`. See `docs/README.md` for structure.

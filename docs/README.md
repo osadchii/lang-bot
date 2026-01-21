@@ -2,11 +2,13 @@
 
 Welcome to the comprehensive documentation for the Greek Language Learning Telegram Bot.
 
-## 📚 Documentation Structure
+**Target Audience**: Russian-speaking users learning Greek.
+
+## Documentation Structure
 
 This documentation is organized into the following sections:
 
-### 🏗️ [Architecture](./architecture/)
+### [Architecture](./architecture/)
 Technical architecture, design patterns, and system design decisions.
 
 - [System Overview](./architecture/system-overview.md) - High-level architecture
@@ -14,15 +16,15 @@ Technical architecture, design patterns, and system design decisions.
 - [Middleware Chain](./architecture/middleware-chain.md) - Request processing pipeline
 - [Service Layer](./architecture/service-layer.md) - Business logic organization
 
-### 🔌 [API Reference](./api/)
+### [API Reference](./api/)
 Detailed API documentation for all components.
 
-- [Services API](./api/services.md) - Service layer methods
+- [Services API](./api/services.md) - Service layer methods (AIService, ConversationService, TranslationService, etc.)
 - [Repositories API](./api/repositories.md) - Data access layer
 - [Telegram Handlers](./api/handlers.md) - Bot command handlers
 - [Utilities](./api/utilities.md) - Helper functions and utilities
 
-### 📖 [Guides](./guides/)
+### [Guides](./guides/)
 Step-by-step guides for common tasks.
 
 - [Quick Start](./guides/quickstart.md) - Get up and running quickly
@@ -30,22 +32,35 @@ Step-by-step guides for common tasks.
 - [Deployment Guide](./guides/deployment.md) - Production deployment
 - [Contributing Guide](./guides/contributing.md) - How to contribute
 
-### 💻 [Development](./development/)
+### [Development](./development/)
 Information for developers working on the project.
 
 - [Development Setup](./development/setup.md) - Local development environment
 - [Code Review Standards](./development/code-review.md) - Quality standards
 - [Testing Guide](./development/testing.md) - Writing and running tests
 - [Migration Guide](./development/migrations.md) - Database migrations
+- [Documentation Workflow](./development/documentation-workflow.md) - How to update docs
 
-## 🎯 Quick Links
+### [Deployment](./deployment/)
+Production deployment and CI/CD setup.
+
+- [CI/CD Setup](./deployment/ci-cd-setup.md) - GitHub Actions, Docker, secrets management
+
+## Quick Links
 
 - **Getting Started**: Start with [Quick Start Guide](./guides/quickstart.md)
 - **For Developers**: Read [Development Setup](./development/setup.md)
 - **Architecture Overview**: See [System Overview](./architecture/system-overview.md)
 - **API Reference**: Check [Services API](./api/services.md)
 
-## 📝 Documentation Maintenance
+## Key Features
+
+- **AI-Powered Message Handling**: Send any text - the bot categorizes your intent (translation, question, etc.)
+- **Smart Translation**: Translates words, checks existing cards, suggests appropriate decks
+- **Conversation History**: AI remembers context for more natural interactions
+- **Spaced Repetition**: SM-2 algorithm for optimal card scheduling
+
+## Documentation Maintenance
 
 This documentation is maintained by the **Documentation Agent** and follows these principles:
 
@@ -54,7 +69,7 @@ This documentation is maintained by the **Documentation Agent** and follows thes
 3. **Comprehensive** - Covers architecture, APIs, guides, and development
 4. **Clear and Concise** - Easy to understand for all skill levels
 
-## 🔄 Last Updated
+## Last Updated
 
 This documentation is automatically maintained. For the latest updates, check the git commit history:
 
@@ -62,7 +77,7 @@ This documentation is automatically maintained. For the latest updates, check th
 git log docs/
 ```
 
-## 🤝 Contributing to Documentation
+## Contributing to Documentation
 
 If you notice outdated or incorrect documentation:
 
@@ -73,3 +88,5 @@ If you notice outdated or incorrect documentation:
 ---
 
 **Note**: This documentation is generated and maintained automatically. For code-specific documentation, see inline comments and docstrings in the source code.
+
+**Last Updated**: 2026-01-21

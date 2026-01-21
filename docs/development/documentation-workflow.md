@@ -482,5 +482,5 @@ Documentation checks (future):
 
 ---
 
-**Last Updated**: 2026-01-20
+**Last Updated**: 2026-01-21
 **Maintained by**: Documentation Agent
