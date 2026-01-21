@@ -1,5 +1,7 @@
 """AI service for OpenAI integration."""
 
+import json
+
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI, RateLimitError
 
 from bot.config.logging_config import get_logger
@@ -7,6 +9,49 @@ from bot.config.settings import settings
 from bot.messages import ai as ai_messages
 
 logger = get_logger(__name__)
+
+# Prompts for message categorization
+CATEGORIZATION_SYSTEM_PROMPT = """Ты - классификатор сообщений для бота изучения греческого языка.
+Твоя задача - определить намерение пользователя и извлечь необходимые данные.
+
+КАТЕГОРИИ:
+1. word_translation - перевод ОДНОГО слова (греческий <-> русский)
+   - Примеры: "калимера", "привет", "как переводится спити", "что значит вода"
+   - Признаки: одиночное слово, просьба перевести слово, вопрос о значении слова
+
+2. text_translation - перевод текста/предложения (более одного слова для перевода)
+   - Примеры: "переведи 'я люблю Грецию'", "как будет по-гречески 'доброе утро, друг'"
+   - Признаки: несколько слов для перевода, предложение, фраза
+
+3. language_question - вопрос о греческом языке (грамматика, употребление, правила)
+   - Примеры: "как образуется прошедшее время", "когда использовать артикль", "почему здесь винительный падеж"
+   - Признаки: вопросы "почему", "как", "когда", "в чем разница", просьба объяснить
+
+ВАЖНО:
+- Если пользователь просто написал слово без контекста - это word_translation
+- Если пользователь написал несколько слов без вопроса о языке - это text_translation
+- Если пользователь задает вопрос о правилах языка - это language_question
+
+Отвечай СТРОГО в формате JSON без дополнительного текста."""
+
+CATEGORIZATION_USER_PROMPT = """Проанализируй сообщение пользователя и определи его намерение.
+
+Сообщение: {message}
+
+Ответь в формате JSON:
+{{
+    "category": "word_translation" | "text_translation" | "language_question" | "unknown",
+    "confidence": 0.0-1.0,
+    "extracted_content": "слово или текст для перевода / вопрос пользователя",
+    "source_language": "greek" | "russian" | null,
+    "topic": "grammar" | "vocabulary" | "pronunciation" | "usage" | null
+}}
+
+Примеры:
+- "спити" -> {{"category": "word_translation", "confidence": 0.95, "extracted_content": "спити", "source_language": "greek", "topic": null}}
+- "как переводится дом" -> {{"category": "word_translation", "confidence": 0.95, "extracted_content": "дом", "source_language": "russian", "topic": null}}
+- "переведи 'я иду домой'" -> {{"category": "text_translation", "confidence": 0.90, "extracted_content": "я иду домой", "source_language": "russian", "topic": null}}
+- "когда использовать о а когда и" -> {{"category": "language_question", "confidence": 0.90, "extracted_content": "когда использовать о а когда и", "source_language": null, "topic": "grammar"}}"""
 
 
 class AIService:
@@ -436,3 +481,43 @@ class AIService:
         except Exception as e:
             logger.warning(f"Failed to generate deck name: {e}")
             return "Разное"
+
+    async def categorize_message(self, message: str) -> dict:
+        """Categorize a user message to determine intent.
+
+        Args:
+            message: User's message text
+
+        Returns:
+            Dictionary with category, confidence, and extracted data
+
+        Raises:
+            Exception: If API call fails or response cannot be parsed
+        """
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": CATEGORIZATION_SYSTEM_PROMPT,
+                    },
+                    {
+                        "role": "user",
+                        "content": CATEGORIZATION_USER_PROMPT.format(message=message),
+                    },
+                ],
+                max_tokens=200,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+
+            content = response.choices[0].message.content or "{}"
+            return json.loads(content)
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse AI categorization response: {e}")
+            raise
+        except (RateLimitError, APITimeoutError, APIConnectionError, APIError) as e:
+            logger.error(f"AI categorization API error: {e}")
+            raise

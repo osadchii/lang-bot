@@ -1,9 +1,10 @@
-"""Smart translation handlers with card integration."""
+"""Translation callback handlers for card integration.
 
-import hashlib
+Message handling is done by unified_message.py handler.
+This module only handles callbacks for adding cards to decks.
+"""
 
 from aiogram import F, Router
-from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,125 +20,12 @@ from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
 from bot.telegram.keyboards.translation_keyboards import (
     get_deck_selection_keyboard,
     get_no_decks_keyboard,
-    get_translation_add_keyboard,
 )
 from bot.telegram.states.translation_states import TranslationAddCard
-from bot.utils.translation_detector import detect_translation_request
 
 logger = get_logger(__name__)
 
 router = Router(name="translation")
-
-
-def _hash_word(word: str) -> str:
-    """Create a short hash for callback data.
-
-    Args:
-        word: Word to hash
-
-    Returns:
-        8-character hash
-    """
-    return hashlib.md5(word.encode()).hexdigest()[:8]
-
-
-@router.message(
-    StateFilter(None),
-    F.text
-    & ~F.text.startswith("/")
-    & ~F.text.in_(
-        [
-            common_msg.BTN_MY_DECKS,
-            common_msg.BTN_LEARN,
-            common_msg.BTN_ADD_CARD,
-            common_msg.BTN_STATISTICS,
-            common_msg.BTN_CANCEL,
-        ]
-    ),
-)
-async def handle_potential_translation(
-    message: Message,
-    session: AsyncSession,
-    user: User,
-    user_created: bool,
-    state: FSMContext,
-):
-    """Handle potential translation requests.
-
-    This handler checks if the message is a translation request.
-    If yes, processes it with card check. If no, passes to next handler.
-
-    Args:
-        message: Message
-        session: Database session
-        user: User instance
-        user_created: Whether user was just created
-        state: FSM context
-    """
-    request = detect_translation_request(message.text)
-    if not request:
-        return  # Not a translation request, let other handlers process
-
-    # Clear any existing state
-    await state.clear()
-
-    thinking_msg = await message.answer(trans_msg.MSG_TRANSLATING)
-
-    try:
-        trans_service = TranslationService(session)
-        result = await trans_service.translate_with_card_check(
-            user=user,
-            word=request.word,
-            source_language=request.source_language,
-        )
-    except Exception as e:
-        logger.exception(f"Translation failed: {e}")
-        await thinking_msg.delete()
-        await message.answer(
-            trans_msg.MSG_TRANSLATION_ERROR,
-            reply_markup=get_main_menu_keyboard(),
-        )
-        return
-
-    await thinking_msg.delete()
-
-    if result.existing_card:
-        # Card exists - show translation with info
-        await message.answer(
-            trans_msg.get_card_exists_message(
-                translation=result.translation,
-                deck_name=result.existing_deck.name if result.existing_deck else "?",
-                count=result.existing_count,
-            ),
-            reply_markup=get_main_menu_keyboard(),
-        )
-    else:
-        # Store data for potential add flow
-        word_hash = _hash_word(result.word)
-        await state.update_data(
-            word=result.word,
-            word_hash=word_hash,
-            source_language=result.source_language,
-            translation=result.translation,
-            suggested_deck_id=result.suggested_deck.id if result.suggested_deck else None,
-            suggested_deck_name=result.suggested_deck_name,
-        )
-
-        # Determine suggested deck name for display
-        suggested_name = None
-        if result.suggested_deck:
-            suggested_name = result.suggested_deck.name
-        elif result.suggested_deck_name:
-            suggested_name = result.suggested_deck_name
-
-        # Show translation with add button
-        await message.answer(
-            trans_msg.get_translation_with_add_option(
-                translation=result.translation,
-                suggested_deck_name=suggested_name,
-            ),
-            reply_markup=get_translation_add_keyboard(word_hash),
-        )
 
 
 @router.callback_query(F.data.startswith("trans_add:"))

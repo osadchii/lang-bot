@@ -1,4 +1,8 @@
-"""AI assistant handlers."""
+"""AI assistant command handlers.
+
+Message handling is done by unified_message.py handler.
+This module only handles explicit commands (/translate, /grammar, /clear_history).
+"""
 
 from aiogram import F, Router
 from aiogram.types import Message
@@ -6,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models.user import User
 from bot.messages import ai as ai_msg
-from bot.messages import common as common_msg
 from bot.services.ai_service import AIService
 from bot.services.conversation_service import ConversationService
 from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
@@ -121,63 +124,3 @@ async def grammar_command(
 
     await thinking_msg.delete()
     await message.answer(ai_msg.get_grammar_result(explanation))
-
-
-@router.message(
-    F.text
-    & ~F.text.startswith("/")
-    & ~F.text.in_(
-        [
-            common_msg.BTN_MY_DECKS,
-            common_msg.BTN_LEARN,
-            common_msg.BTN_ADD_CARD,
-            common_msg.BTN_STATISTICS,
-            common_msg.BTN_CANCEL,
-        ]
-    )
-)
-async def handle_ai_question(
-    message: Message,
-    session: AsyncSession,
-    user: User,
-    user_created: bool,
-):
-    """Handle general AI questions with conversation context.
-
-    Args:
-        message: Message
-        session: Database session
-        user: User instance
-        user_created: Whether user was just created
-    """
-    question = message.text.strip()
-
-    if len(question) < 3:
-        return
-
-    thinking_msg = await message.answer(ai_msg.MSG_THINKING)
-
-    conv_service = ConversationService(session)
-
-    history = await conv_service.get_context_messages(user)
-
-    await conv_service.add_user_message(
-        user=user,
-        content=question,
-        message_type="ask_question",
-    )
-
-    ai_service = AIService()
-    response = await ai_service.ask_question(
-        message=question,
-        conversation_history=history,
-    )
-
-    await conv_service.add_assistant_message(
-        user=user,
-        content=response,
-        message_type="ask_question",
-    )
-
-    await thinking_msg.delete()
-    await message.answer(ai_msg.get_ai_response(response))
