@@ -83,9 +83,8 @@ MSG_MAIN_MENU = "<b>Главное меню</b>\n\nВыбери действие
 # Learning keyboard button labels
 BTN_SHOW_ANSWER = "Показать ответ"
 BTN_END_SESSION = "Завершить сессию"
-BTN_AGAIN = "Снова"
-BTN_HARD = "Трудно"
-BTN_GOOD = "Хорошо"
+BTN_FORGOT = "Не помню"
+BTN_REMEMBERED = "Вспомнил"
 BTN_EASY = "Легко"
 BTN_CONTINUE_LEARNING = "Продолжить обучение"
 BTN_VIEW_STATISTICS = "Статистика"

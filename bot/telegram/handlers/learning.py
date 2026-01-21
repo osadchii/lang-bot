@@ -184,7 +184,7 @@ async def process_quality_rating(
 
     # Update statistics
     cards_reviewed += 1
-    if quality >= 3:  # Good or Easy
+    if quality >= 3:  # Remembered or Easy
         correct_count += 1
 
     # Move to next card

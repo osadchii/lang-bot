@@ -177,7 +177,7 @@ Process a card review and update SRS data.
 **Parameters**:
 - `card_id` (int): Card being reviewed
 - `user_id` (int): User reviewing the card
-- `quality` (int): Quality rating (0, 2, 3, 5)
+- `quality` (int): Quality rating (0=Forgot, 3=Remembered, 5=Easy)
 - `time_spent` (int, optional): Time spent in seconds
 
 **Returns**: Updated Card instance
@@ -187,7 +187,7 @@ Process a card review and update SRS data.
 
 **Example**:
 ```python
-# User rates card as "Good" (3)
+# User rates card as "Remembered" (3)
 card = await learning_service.process_card_review(
     card_id=123,
     user_id=1,

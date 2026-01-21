@@ -7,21 +7,18 @@ EASE_FACTOR_MODIFIER = 0.15  # How much ease factor changes per quality rating
 
 # Initial intervals (in days)
 INITIAL_INTERVAL_AGAIN = 0  # Show again in learning mode (minutes)
-INITIAL_INTERVAL_HARD = 1  # 1 day
-INITIAL_INTERVAL_GOOD = 1  # 1 day
+INITIAL_INTERVAL_REMEMBERED = 1  # 1 day
 INITIAL_INTERVAL_EASY = 4  # 4 days
 
 # Learning mode intervals (in minutes)
 LEARNING_STEPS = [1, 10]  # Minutes for learning new cards
 
-# Quality ratings
-QUALITY_AGAIN = 0  # Completely forgot
-QUALITY_HARD = 2  # Difficult to remember
-QUALITY_GOOD = 3  # Correct response with effort
+# Quality ratings (3-option system)
+QUALITY_FORGOT = 0  # Completely forgot
+QUALITY_REMEMBERED = 3  # Correct response
 QUALITY_EASY = 5  # Perfect response
 
 # Multipliers for interval calculation
-HARD_INTERVAL_MULTIPLIER = 1.2
 EASE_BONUS = 1.3  # Bonus multiplier for "Easy" responses
 
 # Maximum interval (in days)

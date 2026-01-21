@@ -119,7 +119,7 @@ class LearningService:
         Args:
             card_id: Card ID
             user_id: User ID
-            quality: Quality rating (0, 2, 3, 5)
+            quality: Quality rating (0=Forgot, 3=Remembered, 5=Easy)
             time_spent: Time spent on card in seconds
             current_time: Current time (defaults to now)
 
@@ -159,7 +159,7 @@ class LearningService:
 
         # Update statistics
         card.total_reviews += 1
-        if quality >= 3:  # Good or Easy
+        if quality >= 3:  # Remembered or Easy
             card.correct_reviews += 1
 
         await self.session.flush()

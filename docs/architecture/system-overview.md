@@ -125,7 +125,7 @@ All relationships use `ondelete="CASCADE"` for referential integrity.
 
 ### Example: User Reviews a Card
 
-1. **User Input**: User clicks "Good" button (quality=3)
+1. **User Input**: User clicks "Remembered" button (quality=3)
    ```
    CallbackQuery(data="quality:3")
    ```
@@ -378,9 +378,8 @@ The bot uses the **SM-2 algorithm** for optimal card scheduling:
 - `next_review`: DateTime when card is due
 
 ### Quality Ratings
-- 0 = Again (forgot)
-- 2 = Hard (difficult to recall)
-- 3 = Good (correct with effort)
+- 0 = Forgot (completely forgot)
+- 3 = Remembered (correct response)
 - 5 = Easy (perfect recall)
 
 ### Algorithm Location

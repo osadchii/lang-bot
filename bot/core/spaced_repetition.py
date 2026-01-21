@@ -13,17 +13,14 @@ from bot.core.constants import (
     DEFAULT_EASE_FACTOR,
     EASE_BONUS,
     EASE_FACTOR_MODIFIER,
-    HARD_INTERVAL_MULTIPLIER,
     INITIAL_INTERVAL_AGAIN,
     INITIAL_INTERVAL_EASY,
-    INITIAL_INTERVAL_GOOD,
-    INITIAL_INTERVAL_HARD,
+    INITIAL_INTERVAL_REMEMBERED,
     MAX_INTERVAL_DAYS,
     MIN_EASE_FACTOR,
-    QUALITY_AGAIN,
     QUALITY_EASY,
-    QUALITY_GOOD,
-    QUALITY_HARD,
+    QUALITY_FORGOT,
+    QUALITY_REMEMBERED,
 )
 
 
@@ -46,7 +43,7 @@ def calculate_next_review(
     """Calculate next review parameters using SM-2 algorithm.
 
     Args:
-        quality: Quality of recall (0=Again, 2=Hard, 3=Good, 5=Easy)
+        quality: Quality of recall (0=Forgot, 3=Remembered, 5=Easy)
         ease_factor: Current ease factor (difficulty multiplier)
         interval: Current interval in days
         repetitions: Number of consecutive successful repetitions
@@ -56,21 +53,20 @@ def calculate_next_review(
         SRSResult with updated parameters
 
     Quality ratings:
-        0 (Again): Completely forgot - reset the card
-        2 (Hard): Difficult to remember - smaller interval increase
-        3 (Good): Correct with effort - normal interval increase
+        0 (Forgot): Completely forgot - reset the card
+        3 (Remembered): Correct response - normal interval increase
         5 (Easy): Perfect recall - larger interval increase
     """
     if current_time is None:
         current_time = datetime.now(UTC)
 
     # Validate quality
-    if quality not in (QUALITY_AGAIN, QUALITY_HARD, QUALITY_GOOD, QUALITY_EASY):
+    if quality not in (QUALITY_FORGOT, QUALITY_REMEMBERED, QUALITY_EASY):
         raise ValueError(f"Invalid quality rating: {quality}")
 
     # Calculate new ease factor (only for quality >= 3)
     new_ease_factor = ease_factor
-    if quality >= QUALITY_GOOD:
+    if quality >= QUALITY_REMEMBERED:
         # SM-2 formula: EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
         # Simplified version:
         new_ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
@@ -80,29 +76,17 @@ def calculate_next_review(
     new_interval: int
     new_repetitions: int
 
-    if quality == QUALITY_AGAIN:
+    if quality == QUALITY_FORGOT:
         # Reset card to beginning
         new_interval = INITIAL_INTERVAL_AGAIN
         new_repetitions = 0
         # Reduce ease factor for failed cards
         new_ease_factor = max(ease_factor - EASE_FACTOR_MODIFIER, MIN_EASE_FACTOR)
 
-    elif quality == QUALITY_HARD:
-        if repetitions == 0:
-            # First time seeing the card
-            new_interval = INITIAL_INTERVAL_HARD
-            new_repetitions = 1
-        else:
-            # Increase interval but less than normal
-            new_interval = int(interval * HARD_INTERVAL_MULTIPLIER)
-            new_repetitions = repetitions + 1
-        # Slightly reduce ease factor
-        new_ease_factor = max(ease_factor - EASE_FACTOR_MODIFIER * 0.5, MIN_EASE_FACTOR)
-
-    elif quality == QUALITY_GOOD:
+    elif quality == QUALITY_REMEMBERED:
         if repetitions == 0:
             # First review - use initial interval
-            new_interval = INITIAL_INTERVAL_GOOD
+            new_interval = INITIAL_INTERVAL_REMEMBERED
             new_repetitions = 1
         elif repetitions == 1:
             # Second review
@@ -175,9 +159,8 @@ def get_quality_label(quality: int) -> str:
         Label string
     """
     labels = {
-        QUALITY_AGAIN: "Again",
-        QUALITY_HARD: "Hard",
-        QUALITY_GOOD: "Good",
+        QUALITY_FORGOT: "Forgot",
+        QUALITY_REMEMBERED: "Remembered",
         QUALITY_EASY: "Easy",
     }
     return labels.get(quality, "Unknown")

@@ -3,7 +3,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.core.constants import QUALITY_AGAIN, QUALITY_EASY, QUALITY_GOOD, QUALITY_HARD
+from bot.core.constants import QUALITY_EASY, QUALITY_FORGOT, QUALITY_REMEMBERED
 from bot.messages import common as common_msg
 from bot.messages import learning as learn_msg
 
@@ -25,17 +25,16 @@ def get_quality_rating_keyboard() -> InlineKeyboardMarkup:
     """Get keyboard with quality rating buttons.
 
     Returns:
-        Inline keyboard with quality rating buttons
+        Inline keyboard with quality rating buttons (3-option system)
     """
     builder = InlineKeyboardBuilder()
 
-    builder.button(text=learn_msg.BTN_AGAIN, callback_data=f"quality:{QUALITY_AGAIN}")
-    builder.button(text=learn_msg.BTN_HARD, callback_data=f"quality:{QUALITY_HARD}")
-    builder.button(text=learn_msg.BTN_GOOD, callback_data=f"quality:{QUALITY_GOOD}")
+    builder.button(text=learn_msg.BTN_FORGOT, callback_data=f"quality:{QUALITY_FORGOT}")
+    builder.button(text=learn_msg.BTN_REMEMBERED, callback_data=f"quality:{QUALITY_REMEMBERED}")
     builder.button(text=learn_msg.BTN_EASY, callback_data=f"quality:{QUALITY_EASY}")
     builder.button(text=learn_msg.BTN_END_SESSION, callback_data="end_session")
 
-    builder.adjust(2, 2, 1)
+    builder.adjust(3, 1)
 
     return builder.as_markup()
 
