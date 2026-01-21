@@ -4,6 +4,7 @@ from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI, R
 
 from bot.config.logging_config import get_logger
 from bot.config.settings import settings
+from bot.messages import ai as ai_messages
 
 logger = get_logger(__name__)
 
@@ -33,15 +34,16 @@ class AIService:
                 {
                     "role": "system",
                     "content": (
-                        "You are a helpful Greek language learning assistant. "
-                        "Help users learn Greek by answering questions, explaining grammar, "
-                        "and providing translations. Be concise and educational."
+                        "Ты - полезный ассистент для изучения греческого языка. "
+                        "Помогай пользователям учить греческий: отвечай на вопросы, объясняй грамматику, "
+                        "делай переводы. Отвечай на русском языке, будь кратким и познавательным. "
+                        "Для греческих существительных всегда указывай артикль (ο, η, το) для обозначения рода."
                     ),
                 }
             ]
 
             if context:
-                messages.append({"role": "system", "content": f"Context: {context}"})
+                messages.append({"role": "system", "content": f"Контекст: {context}"})
 
             messages.append({"role": "user", "content": message})
 
@@ -52,41 +54,46 @@ class AIService:
                 temperature=self.temperature,
             )
 
-            return response.choices[0].message.content or "I couldn't generate a response."
+            return response.choices[0].message.content or "Не удалось сгенерировать ответ."
 
         except RateLimitError:
             logger.warning("OpenAI rate limit exceeded")
-            return "I'm receiving too many requests right now. Please wait about a minute and try again."
+            return ai_messages.MSG_AI_RATE_LIMIT
         except APITimeoutError:
             logger.error("OpenAI request timeout")
-            return "Your request took too long to process. Please try again with a simpler query."
+            return ai_messages.MSG_AI_TIMEOUT
         except APIConnectionError:
             logger.error("Failed to connect to OpenAI")
-            return "I'm having trouble connecting to the AI service. Please check your internet connection and try again."
+            return ai_messages.MSG_AI_CONNECTION_ERROR
         except APIError as e:
             logger.error(f"OpenAI API error: {e}")
-            return "AI service error. Please try again."
+            return ai_messages.MSG_AI_SERVICE_ERROR
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
-            return "Unexpected error occurred. Please try again later."
+            return ai_messages.MSG_AI_UNEXPECTED_ERROR
 
     async def translate_word(
-        self, word: str, from_lang: str = "greek", to_lang: str = "english"
+        self, word: str, from_lang: str = "greek", to_lang: str = "russian"
     ) -> str:
-        """Translate a word or phrase.
+        """Translate a word or phrase between Greek and Russian.
 
         Args:
             word: Word or phrase to translate
-            from_lang: Source language
-            to_lang: Target language
+            from_lang: Source language ('greek' or 'russian')
+            to_lang: Target language ('greek' or 'russian')
 
         Returns:
             Translation with optional context
         """
         try:
+            lang_names = {"greek": "греческого", "russian": "русского"}
+            to_lang_names = {"greek": "греческий", "russian": "русский"}
+
             prompt = (
-                f"Translate the following {from_lang} word/phrase to {to_lang}. "
-                f"Provide the translation and a brief explanation if needed:\n\n{word}"
+                f"Переведи следующее слово/фразу с {lang_names.get(from_lang, from_lang)} "
+                f"на {to_lang_names.get(to_lang, to_lang)}. "
+                f"Для греческих существительных укажи артикль (ο/η/το).\n"
+                f"Дай перевод и краткое пояснение при необходимости:\n\n{word}"
             )
 
             response = await self.client.chat.completions.create(
@@ -94,31 +101,35 @@ class AIService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a Greek-English translator. Provide accurate translations.",
+                        "content": (
+                            "Ты - греческо-русский переводчик. Давай точные переводы. "
+                            "Для греческих существительных всегда указывай определённый артикль "
+                            "для обозначения рода."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=500,
-                temperature=0.3,  # Lower temperature for more consistent translations
+                temperature=0.3,
             )
 
-            return response.choices[0].message.content or "Translation not available."
+            return response.choices[0].message.content or "Перевод недоступен."
 
         except RateLimitError:
             logger.warning("OpenAI rate limit exceeded")
-            return "I'm receiving too many requests right now. Please wait about a minute and try again."
+            return ai_messages.MSG_AI_RATE_LIMIT
         except APITimeoutError:
             logger.error("OpenAI request timeout")
-            return "Your request took too long to process. Please try again with a simpler query."
+            return ai_messages.MSG_AI_TIMEOUT
         except APIConnectionError:
             logger.error("Failed to connect to OpenAI")
-            return "I'm having trouble connecting to the AI service. Please check your internet connection and try again."
+            return ai_messages.MSG_AI_CONNECTION_ERROR
         except APIError as e:
             logger.error(f"OpenAI API error: {e}")
-            return "AI service error. Please try again."
+            return ai_messages.MSG_AI_SERVICE_ERROR
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
-            return "Unexpected error occurred. Please try again later."
+            return ai_messages.MSG_AI_UNEXPECTED_ERROR
 
     async def explain_grammar(self, text: str) -> str:
         """Explain the grammar of a Greek sentence or phrase.
@@ -127,15 +138,15 @@ class AIService:
             text: Greek text to explain
 
         Returns:
-            Grammar explanation
+            Grammar explanation in Russian
         """
         try:
             prompt = (
-                f"Explain the grammar of this Greek text in simple terms:\n\n{text}\n\n"
-                f"Include:\n"
-                f"1. Word breakdown\n"
-                f"2. Grammatical structures\n"
-                f"3. Key grammar rules being used"
+                f"Объясни грамматику этого греческого текста простым языком:\n\n{text}\n\n"
+                f"Включи:\n"
+                f"1. Разбор слов\n"
+                f"2. Грамматические конструкции\n"
+                f"3. Ключевые грамматические правила"
             )
 
             response = await self.client.chat.completions.create(
@@ -144,8 +155,8 @@ class AIService:
                     {
                         "role": "system",
                         "content": (
-                            "You are a Greek grammar expert. Explain Greek grammar "
-                            "in a clear, educational way for language learners."
+                            "Ты - эксперт по греческой грамматике. Объясняй греческую грамматику "
+                            "понятно и доступно для изучающих язык. Отвечай на русском языке."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -154,45 +165,66 @@ class AIService:
                 temperature=0.5,
             )
 
-            return response.choices[0].message.content or "Grammar explanation not available."
+            return response.choices[0].message.content or "Объяснение грамматики недоступно."
 
         except RateLimitError:
             logger.warning("OpenAI rate limit exceeded")
-            return "I'm receiving too many requests right now. Please wait about a minute and try again."
+            return ai_messages.MSG_AI_RATE_LIMIT
         except APITimeoutError:
             logger.error("OpenAI request timeout")
-            return "Your request took too long to process. Please try again with a simpler query."
+            return ai_messages.MSG_AI_TIMEOUT
         except APIConnectionError:
             logger.error("Failed to connect to OpenAI")
-            return "I'm having trouble connecting to the AI service. Please check your internet connection and try again."
+            return ai_messages.MSG_AI_CONNECTION_ERROR
         except APIError as e:
             logger.error(f"OpenAI API error: {e}")
-            return "AI service error. Please try again."
+            return ai_messages.MSG_AI_SERVICE_ERROR
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
-            return "Unexpected error occurred. Please try again later."
+            return ai_messages.MSG_AI_UNEXPECTED_ERROR
 
-    async def generate_card_from_word(self, word: str) -> dict[str, str]:
-        """Generate a flashcard from a Greek word.
+    async def generate_card_from_word(
+        self, word: str, source_language: str = "greek"
+    ) -> dict[str, str]:
+        """Generate a flashcard from a word in Greek or Russian.
 
         Args:
-            word: Greek word
+            word: Word to create card from
+            source_language: 'greek' or 'russian'
 
         Returns:
-            Dictionary with 'front', 'back', and 'example' fields
+            Dictionary with 'front' (Greek with article), 'back' (Russian), 'example' fields
         """
         try:
-            prompt = (
-                f"Create a flashcard for learning the Greek word: {word}\n\n"
-                f"Provide:\n"
-                f"1. The Greek word (front of card)\n"
-                f"2. English translation (back of card)\n"
-                f"3. An example sentence in Greek with English translation\n\n"
-                f"Format your response as:\n"
-                f"FRONT: [Greek word]\n"
-                f"BACK: [English translation]\n"
-                f"EXAMPLE: [Greek example] - [English translation]"
-            )
+            if source_language == "russian":
+                prompt = (
+                    f"Создай карточку для изучения греческого слова по русскому слову: {word}\n\n"
+                    f"Предоставь:\n"
+                    f"1. Греческий перевод С АРТИКЛЕМ (ο/η/το для существительных)\n"
+                    f"2. Исходное русское слово\n"
+                    f"3. Пример предложения на греческом с русским переводом\n\n"
+                    f"ВАЖНО: Для существительных ОБЯЗАТЕЛЬНО укажи греческий артикль "
+                    f"(ο для мужского рода, η для женского, το для среднего).\n\n"
+                    f"Формат ответа:\n"
+                    f"FRONT: [греческое слово с артиклем если существительное]\n"
+                    f"BACK: [русское слово]\n"
+                    f"EXAMPLE: [пример на греческом] - [русский перевод]"
+                )
+            else:
+                prompt = (
+                    f"Создай карточку для изучения греческого слова: {word}\n\n"
+                    f"Предоставь:\n"
+                    f"1. Греческое слово С АРТИКЛЕМ (ο/η/το для существительных)\n"
+                    f"2. Русский перевод\n"
+                    f"3. Пример предложения на греческом с русским переводом\n\n"
+                    f"ВАЖНО: Для существительных ОБЯЗАТЕЛЬНО укажи греческий артикль "
+                    f"(ο для мужского рода, η для женского, το для среднего).\n"
+                    f"Если во вводе нет артикля, добавь правильный.\n\n"
+                    f"Формат ответа:\n"
+                    f"FRONT: [греческое слово с артиклем если существительное]\n"
+                    f"BACK: [русский перевод]\n"
+                    f"EXAMPLE: [пример на греческом] - [русский перевод]"
+                )
 
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -200,8 +232,10 @@ class AIService:
                     {
                         "role": "system",
                         "content": (
-                            "You are a Greek language teaching expert. "
-                            "Create educational flashcards for Greek vocabulary."
+                            "Ты - эксперт по греческому языку, помогающий русскоязычным "
+                            "изучать греческий. Всегда давай точные переводы и убедись, что "
+                            "греческие существительные включают артикль (ο, η, το) для указания "
+                            "грамматического рода. Отвечай строго в запрошенном формате."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -231,18 +265,18 @@ class AIService:
             logger.warning("OpenAI rate limit exceeded")
             return {
                 "front": word,
-                "back": "Rate limit exceeded. Please try again later.",
+                "back": ai_messages.MSG_AI_RATE_LIMIT,
                 "example": "",
             }
         except APITimeoutError:
             logger.error("OpenAI request timeout")
-            return {"front": word, "back": "Request timeout. Please try again.", "example": ""}
+            return {"front": word, "back": ai_messages.MSG_AI_TIMEOUT, "example": ""}
         except APIConnectionError:
             logger.error("Failed to connect to OpenAI")
-            return {"front": word, "back": "Connection error. Please try again.", "example": ""}
+            return {"front": word, "back": ai_messages.MSG_AI_CONNECTION_ERROR, "example": ""}
         except APIError as e:
             logger.error(f"OpenAI API error: {e}")
-            return {"front": word, "back": "AI service error. Please try again.", "example": ""}
+            return {"front": word, "back": ai_messages.MSG_AI_SERVICE_ERROR, "example": ""}
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
             return {"front": word, "back": "", "example": ""}
@@ -254,12 +288,12 @@ class AIService:
             word: Greek word
 
         Returns:
-            Example sentence with translation
+            Example sentence with Russian translation
         """
         try:
             prompt = (
-                f"Create a simple example sentence in Greek using the word: {word}\n"
-                f"Provide both the Greek sentence and English translation."
+                f"Создай простое примерное предложение на греческом, используя слово: {word}\n"
+                f"Предоставь греческое предложение и его русский перевод."
             )
 
             response = await self.client.chat.completions.create(
@@ -267,7 +301,10 @@ class AIService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a Greek language teacher creating example sentences.",
+                        "content": (
+                            "Ты - преподаватель греческого языка, создающий примеры предложений. "
+                            "Отвечай на русском языке."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -279,16 +316,16 @@ class AIService:
 
         except RateLimitError:
             logger.warning("OpenAI rate limit exceeded")
-            return "Rate limit exceeded. Please try again later."
+            return ai_messages.MSG_AI_RATE_LIMIT
         except APITimeoutError:
             logger.error("OpenAI request timeout")
-            return "Request timeout. Please try again."
+            return ai_messages.MSG_AI_TIMEOUT
         except APIConnectionError:
             logger.error("Failed to connect to OpenAI")
-            return "Connection error. Please try again."
+            return ai_messages.MSG_AI_CONNECTION_ERROR
         except APIError as e:
             logger.error(f"OpenAI API error: {e}")
-            return "AI service error. Please try again."
+            return ai_messages.MSG_AI_SERVICE_ERROR
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
             return ""

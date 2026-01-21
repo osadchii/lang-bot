@@ -3,6 +3,8 @@
 from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
+from bot.messages import common as msg
+
 
 def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     """Get main menu keyboard.
@@ -12,12 +14,12 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     """
     builder = ReplyKeyboardBuilder()
 
-    builder.button(text="📚 My Decks")
-    builder.button(text="📖 Learn")
-    builder.button(text="➕ Add Card")
-    builder.button(text="🤖 AI Assistant")
-    builder.button(text="📊 Statistics")
-    builder.button(text="❓ Help")
+    builder.button(text=msg.BTN_MY_DECKS)
+    builder.button(text=msg.BTN_LEARN)
+    builder.button(text=msg.BTN_ADD_CARD)
+    builder.button(text=msg.BTN_AI_ASSISTANT)
+    builder.button(text=msg.BTN_STATISTICS)
+    builder.button(text=msg.BTN_HELP)
 
     builder.adjust(2, 2, 2)
 
@@ -31,7 +33,7 @@ def get_cancel_keyboard() -> ReplyKeyboardMarkup:
         Reply keyboard with cancel button
     """
     builder = ReplyKeyboardBuilder()
-    builder.button(text="❌ Cancel")
+    builder.button(text=msg.BTN_CANCEL)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -42,5 +44,5 @@ def get_back_to_menu_keyboard() -> InlineKeyboardMarkup:
         Inline keyboard markup
     """
     builder = InlineKeyboardBuilder()
-    builder.button(text="🏠 Back to Menu", callback_data="main_menu")
+    builder.button(text=msg.BTN_BACK_TO_MENU, callback_data="main_menu")
     return builder.as_markup()

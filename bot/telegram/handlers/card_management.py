@@ -6,6 +6,8 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models.user import User
+from bot.messages import cards as card_msg
+from bot.messages import common as common_msg
 from bot.services.ai_service import AIService
 from bot.services.card_service import CardService
 from bot.services.deck_service import DeckService
@@ -18,11 +20,12 @@ from bot.telegram.keyboards.deck_keyboards import get_deck_list_keyboard
 from bot.telegram.keyboards.main_menu import get_cancel_keyboard, get_main_menu_keyboard
 from bot.telegram.states.card_states import CardAICreation, CardCreation
 from bot.telegram.utils.callback_parser import parse_callback_int
+from bot.utils.language_detector import detect_language
 
 router = Router(name="card_management")
 
 
-@router.message(F.text == "➕ Add Card")
+@router.message(F.text == common_msg.BTN_ADD_CARD)
 async def start_add_card(message: Message, session: AsyncSession, user: User):
     """Start card addition process by selecting deck.
 
@@ -36,16 +39,13 @@ async def start_add_card(message: Message, session: AsyncSession, user: User):
 
     if not decks:
         await message.answer(
-            "❌ You don't have any decks yet.\n\n" "Create a deck first using <b>📚 My Decks</b>.",
+            card_msg.MSG_NO_DECKS_FOR_CARD,
             reply_markup=get_main_menu_keyboard(),
         )
         return
 
-    text = "📝 <b>Add New Card</b>\n\nSelect a deck:"
     keyboard = get_deck_list_keyboard(decks)
-
-    # Modify keyboard to use add_card callbacks
-    await message.answer(text, reply_markup=keyboard)
+    await message.answer(card_msg.MSG_SELECT_DECK_FOR_CARD, reply_markup=keyboard)
 
 
 @router.callback_query(F.data.startswith("add_card:"))
@@ -57,12 +57,13 @@ async def choose_card_creation_method(callback: CallbackQuery):
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
-    text = "📝 <b>Add New Card</b>\n\n" "How would you like to create the card?"
-
-    await callback.message.edit_text(text, reply_markup=get_card_creation_method_keyboard(deck_id))
+    await callback.message.edit_text(
+        card_msg.MSG_CHOOSE_CREATION_METHOD,
+        reply_markup=get_card_creation_method_keyboard(deck_id),
+    )
     await callback.answer()
 
 
@@ -76,16 +77,13 @@ async def start_manual_card_creation(callback: CallbackQuery, state: FSMContext)
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     await state.update_data(deck_id=deck_id)
     await state.set_state(CardCreation.waiting_for_front)
 
-    await callback.message.edit_text(
-        "📝 <b>Create Card - Step 1/3</b>\n\n"
-        "Enter the <b>Greek word or phrase</b> (front of card):"
-    )
+    await callback.message.edit_text(card_msg.MSG_CARD_STEP_1)
     await callback.answer()
 
 
@@ -103,9 +101,7 @@ async def process_card_front(message: Message, state: FSMContext):
     await state.set_state(CardCreation.waiting_for_back)
 
     await message.answer(
-        f"✅ Front: <b>{front}</b>\n\n"
-        f"📝 <b>Create Card - Step 2/3</b>\n\n"
-        f"Enter the <b>English translation</b> (back of card):",
+        card_msg.get_card_step_2(front),
         reply_markup=get_cancel_keyboard(),
     )
 
@@ -127,10 +123,7 @@ async def process_card_back(message: Message, state: FSMContext):
     front = data.get("front")
 
     await message.answer(
-        f"✅ Front: <b>{front}</b>\n"
-        f"✅ Back: <b>{back}</b>\n\n"
-        f"📝 <b>Create Card - Step 3/3</b>\n\n"
-        f"Enter an <b>example sentence</b> (or send /skip):",
+        card_msg.get_card_step_3(front, back),
         reply_markup=get_cancel_keyboard(),
     )
 
@@ -158,10 +151,7 @@ async def process_card_example(message: Message, state: FSMContext, session: Asy
     await state.clear()
 
     await message.answer(
-        f"✅ <b>Card created successfully!</b>\n\n"
-        f"<b>Front:</b> {card.front}\n"
-        f"<b>Back:</b> {card.back}\n"
-        f"<b>Example:</b> {card.example or 'None'}",
+        card_msg.get_card_created_message(card.front, card.back, card.example),
         reply_markup=get_main_menu_keyboard(),
     )
 
@@ -176,22 +166,19 @@ async def start_ai_card_creation(callback: CallbackQuery, state: FSMContext):
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     await state.update_data(deck_id=deck_id)
     await state.set_state(CardAICreation.waiting_for_word)
 
-    await callback.message.edit_text(
-        "🤖 <b>AI Card Creation</b>\n\n"
-        "Enter a <b>Greek word</b> and I'll create a complete flashcard for you:"
-    )
+    await callback.message.edit_text(card_msg.MSG_AI_CARD_PROMPT)
     await callback.answer()
 
 
 @router.message(CardAICreation.waiting_for_word)
 async def process_ai_word(message: Message, state: FSMContext, session: AsyncSession):
-    """Process word for AI card generation.
+    """Process word for AI card generation - supports Greek or Russian input.
 
     Args:
         message: Message
@@ -200,27 +187,35 @@ async def process_ai_word(message: Message, state: FSMContext, session: AsyncSes
     """
     word = message.text.strip()
 
-    # Show thinking message
-    thinking_msg = await message.answer("🤖 Generating card with AI...")
+    # Detect language
+    source_lang = detect_language(word)
 
-    # Generate card with AI
-    ai_service = AIService()
-    card_data = await ai_service.generate_card_from_word(word)
-
-    await thinking_msg.delete()
-
-    if not card_data.get("back"):
+    if source_lang == "unknown":
         await message.answer(
-            "❌ Sorry, I couldn't generate a card for that word. Please try again.",
+            card_msg.MSG_UNKNOWN_LANGUAGE,
             reply_markup=get_main_menu_keyboard(),
         )
         await state.clear()
         return
 
-    # Save to state
-    await state.update_data(**card_data)
+    # Show thinking message
+    thinking_msg = await message.answer(card_msg.MSG_AI_GENERATING)
 
-    # Show preview and create
+    # Generate card with AI using detected language
+    ai_service = AIService()
+    card_data = await ai_service.generate_card_from_word(word, source_lang)
+
+    await thinking_msg.delete()
+
+    if not card_data.get("back"):
+        await message.answer(
+            card_msg.MSG_AI_CARD_ERROR,
+            reply_markup=get_main_menu_keyboard(),
+        )
+        await state.clear()
+        return
+
+    # Create card
     data = await state.get_data()
     deck_id = data.get("deck_id")
 
@@ -235,10 +230,7 @@ async def process_ai_word(message: Message, state: FSMContext, session: AsyncSes
     await state.clear()
 
     await message.answer(
-        f"✅ <b>AI Card Created!</b>\n\n"
-        f"<b>Front:</b> {card.front}\n"
-        f"<b>Back:</b> {card.back}\n"
-        f"<b>Example:</b> {card.example or 'None'}",
+        card_msg.get_ai_card_created_message(card.front, card.back, card.example),
         reply_markup=get_main_menu_keyboard(),
     )
 
@@ -253,28 +245,25 @@ async def view_deck_cards(callback: CallbackQuery, session: AsyncSession):
     """
     parts = callback.data.split(":")
     if len(parts) < 2:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     try:
         deck_id = int(parts[1])
         offset = int(parts[2]) if len(parts) > 2 else 0
     except (ValueError, IndexError):
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     card_service = CardService(session)
     cards = await card_service.get_deck_cards(deck_id, limit=10, offset=offset)
 
     if not cards:
-        await callback.message.edit_text(
-            "📝 This deck has no cards yet.\n\n" "Add some cards to start learning!"
-        )
+        await callback.message.edit_text(card_msg.MSG_NO_CARDS_IN_DECK)
         await callback.answer()
         return
 
-    text = f"📝 <b>Cards in Deck</b> (showing {offset + 1}-{offset + len(cards)}):\n\n"
-
+    text = card_msg.get_cards_list_message(offset, len(cards))
     keyboard = get_card_list_keyboard(cards, deck_id, offset)
     await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
@@ -290,25 +279,23 @@ async def show_card_details(callback: CallbackQuery, session: AsyncSession):
     """
     card_id = parse_callback_int(callback.data)
     if card_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     card_service = CardService(session)
     card = await card_service.get_card(card_id)
 
     if not card:
-        await callback.answer("❌ Card not found", show_alert=True)
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
-    text = (
-        f"📝 <b>Card Details</b>\n\n"
-        f"<b>Front:</b> {card.front}\n"
-        f"<b>Back:</b> {card.back}\n"
-        f"<b>Example:</b> {card.example or 'None'}\n\n"
-        f"<b>Stats:</b>\n"
-        f"• Reviews: {card.total_reviews}\n"
-        f"• Success Rate: {card.success_rate:.1f}%\n"
-        f"• Next Review: {card.next_review.strftime('%Y-%m-%d %H:%M')}"
+    text = card_msg.get_card_details_message(
+        card.front,
+        card.back,
+        card.example,
+        card.total_reviews,
+        card.success_rate,
+        card.next_review.strftime("%Y-%m-%d %H:%M"),
     )
 
     await callback.message.edit_text(

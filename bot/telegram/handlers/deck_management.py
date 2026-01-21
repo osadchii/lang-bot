@@ -7,6 +7,8 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models.user import User
+from bot.messages import common as common_msg
+from bot.messages import decks as deck_msg
 from bot.services.deck_service import DeckService
 from bot.telegram.keyboards.deck_keyboards import (
     get_deck_actions_keyboard,
@@ -20,7 +22,7 @@ from bot.telegram.utils.callback_parser import parse_callback_int
 router = Router(name="deck_management")
 
 
-@router.message(F.text == "📚 My Decks")
+@router.message(F.text == common_msg.BTN_MY_DECKS)
 @router.callback_query(F.data == "decks")
 async def show_decks(event: Message | CallbackQuery, session: AsyncSession, user: User):
     """Show user's decks.
@@ -34,11 +36,9 @@ async def show_decks(event: Message | CallbackQuery, session: AsyncSession, user
     decks = await deck_service.get_user_decks(user.id)
 
     if not decks:
-        text = (
-            "📚 <b>You don't have any decks yet.</b>\n\nCreate your first deck to start learning!"
-        )
+        text = deck_msg.MSG_NO_DECKS
     else:
-        text = f"📚 <b>Your Decks ({len(decks)})</b>\n\nSelect a deck to manage:"
+        text = deck_msg.get_decks_list_message(len(decks))
 
     keyboard = get_deck_list_keyboard(decks)
 
@@ -57,9 +57,7 @@ async def start_deck_creation(callback: CallbackQuery, state: FSMContext):
         callback: Callback query
         state: FSM state
     """
-    await callback.message.edit_text(
-        "📝 <b>Create New Deck</b>\n\nPlease enter a name for your deck:",
-    )
+    await callback.message.edit_text(deck_msg.MSG_CREATE_DECK_NAME)
     await state.set_state(DeckCreation.waiting_for_name)
     await callback.answer()
 
@@ -75,18 +73,18 @@ async def process_deck_name(message: Message, state: FSMContext):
     deck_name = message.text.strip()
 
     if len(deck_name) < 1:
-        await message.answer("❌ Deck name cannot be empty. Please try again:")
+        await message.answer(deck_msg.MSG_DECK_NAME_EMPTY)
         return
 
     if len(deck_name) > 100:
-        await message.answer("❌ Deck name is too long (max 100 characters). Please try again:")
+        await message.answer(deck_msg.MSG_DECK_NAME_TOO_LONG)
         return
 
     await state.update_data(deck_name=deck_name)
     await state.set_state(DeckCreation.waiting_for_description)
 
     await message.answer(
-        f"✅ Deck name: <b>{deck_name}</b>\n\n" f"Now enter a description (or send /skip to skip):",
+        deck_msg.get_deck_name_confirm(deck_name),
         reply_markup=get_cancel_keyboard(),
     )
 
@@ -116,9 +114,7 @@ async def process_deck_description(
     await state.clear()
 
     await message.answer(
-        f"✅ <b>Deck created successfully!</b>\n\n"
-        f"<b>Name:</b> {deck.name}\n"
-        f"<b>Description:</b> {deck.description or 'No description'}",
+        deck_msg.get_deck_created_message(deck.name, deck.description),
         reply_markup=get_main_menu_keyboard(),
     )
 
@@ -133,23 +129,17 @@ async def show_deck_details(callback: CallbackQuery, session: AsyncSession):
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     deck_service = DeckService(session)
     deck, card_count = await deck_service.get_deck_with_stats(deck_id)
 
     if not deck:
-        await callback.answer("❌ Deck not found", show_alert=True)
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
-    text = (
-        f"📚 <b>{deck.name}</b>\n\n"
-        f"<b>Description:</b> {deck.description or 'No description'}\n"
-        f"<b>Cards:</b> {card_count}\n\n"
-        f"What would you like to do?"
-    )
-
+    text = deck_msg.get_deck_details_message(deck.name, deck.description, card_count)
     await callback.message.edit_text(text, reply_markup=get_deck_actions_keyboard(deck_id))
     await callback.answer()
 
@@ -164,23 +154,17 @@ async def confirm_deck_deletion(callback: CallbackQuery, session: AsyncSession):
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     deck_service = DeckService(session)
     deck = await deck_service.get_deck(deck_id)
 
     if not deck:
-        await callback.answer("❌ Deck not found", show_alert=True)
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
-    text = (
-        f"⚠️ <b>Delete Deck?</b>\n\n"
-        f"Are you sure you want to delete <b>{deck.name}</b>?\n"
-        f"This will also delete all cards in this deck!\n\n"
-        f"This action cannot be undone."
-    )
-
+    text = deck_msg.get_deck_delete_confirm_message(deck.name)
     await callback.message.edit_text(text, reply_markup=get_deck_delete_confirm_keyboard(deck_id))
     await callback.answer()
 
@@ -196,31 +180,31 @@ async def delete_deck(callback: CallbackQuery, session: AsyncSession, user: User
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     deck_service = DeckService(session)
     deck = await deck_service.get_deck(deck_id)
 
     if not deck:
-        await callback.answer("❌ Deck not found", show_alert=True)
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
     if deck.user_id != user.id:
-        await callback.answer("❌ You don't own this deck", show_alert=True)
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
     deck_name = deck.name
     await deck_service.delete_deck(deck)
 
-    await callback.message.edit_text(f"✅ Deck <b>{deck_name}</b> has been deleted.")
+    await callback.message.edit_text(deck_msg.get_deck_deleted_message(deck_name))
     await callback.answer()
 
     # Show decks list after short delay
     await show_decks(callback, session, user)
 
 
-@router.message(F.text == "❌ Cancel", StateFilter("*"))
+@router.message(F.text == common_msg.BTN_CANCEL, StateFilter("*"))
 async def cancel_action(message: Message, state: FSMContext):
     """Cancel current action.
 
@@ -229,4 +213,4 @@ async def cancel_action(message: Message, state: FSMContext):
         state: FSM state
     """
     await state.clear()
-    await message.answer("❌ Action cancelled.", reply_markup=get_main_menu_keyboard())
+    await message.answer(common_msg.MSG_CANCEL_ACTION, reply_markup=get_main_menu_keyboard())

@@ -4,6 +4,7 @@ from aiogram import Router
 from aiogram.types import ErrorEvent
 
 from bot.config.logging_config import get_logger
+from bot.messages import common as common_msg
 
 logger = get_logger(__name__)
 
@@ -22,20 +23,17 @@ async def error_handler(event: ErrorEvent):
     # Try to notify user
     if event.update.message:
         try:
-            await event.update.message.answer(
-                "❌ An error occurred while processing your request.\n"
-                "Please try again later or contact support."
-            )
+            await event.update.message.answer(common_msg.MSG_ERROR_GENERIC)
         except Exception as e:
             logger.error(f"Failed to send error message to user: {e}")
 
     elif event.update.callback_query:
         try:
             await event.update.callback_query.answer(
-                "❌ An error occurred. Please try again.",
+                common_msg.MSG_ERROR_CALLBACK,
                 show_alert=True,
             )
         except Exception as e:
             logger.error(f"Failed to send error callback to user: {e}")
 
-    return True  # Mark as handled
+    return True

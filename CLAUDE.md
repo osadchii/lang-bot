@@ -1,14 +1,20 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-Greek language learning Telegram bot built with:
+Greek language learning Telegram bot for **Russian-speaking users** built with:
 - **aiogram 3.x** - Telegram bot framework
 - **SQLAlchemy 2.0** with async (asyncpg) - PostgreSQL
-- **OpenAI API** - AI-powered features
+- **OpenAI API** - AI-powered features (Russian prompts, Greek-Russian translation)
 - **SM-2 algorithm** - Spaced repetition system
+
+### Target Audience
+- **Native language**: Russian
+- **Learning language**: Greek
+- **UI language**: Russian
+- **Card format**: Greek (front with article) / Russian (back)
 
 ## Rules and Guidelines
 
@@ -24,41 +30,35 @@ Greek language learning Telegram bot built with:
 
 **READ THESE FILES BEFORE MAKING CHANGES**.
 
-## Documentation
+## Essential Commands
 
-All project documentation is in `/docs`:
-- Start with [/docs/README.md](./docs/README.md)
-- Architecture: [/docs/architecture/system-overview.md](./docs/architecture/system-overview.md)
-- API Reference: [/docs/api/](./docs/api/)
-
-### Documentation Agent
-
+### Development Workflow (Makefile)
 ```bash
-/docs update          # Update all documentation
-/docs verify          # Verify accuracy
-/docs api Services    # Update service API docs
+make verify        # Full verification before push (lint, format, typecheck, tests)
+make fix           # Auto-fix linting and formatting issues
+make check         # Run all checks without fixing
+make pre-commit    # Install pre-commit hooks
 ```
 
-## Essential Commands
+### Individual Commands
+```bash
+make lint          # Run ruff linter
+make format        # Format code with black
+make typecheck     # Run mypy type checking
+make test          # Run tests
+make test-cov      # Run tests with coverage report
+```
 
 ### Run Bot
 ```bash
 python -m bot
 ```
 
-### Database
+### Database Migrations
 ```bash
 alembic revision --autogenerate -m "description"  # Create migration
 alembic upgrade head                              # Apply migrations
 alembic downgrade -1                              # Rollback
-```
-
-### Testing
-```bash
-pytest                              # Run tests
-pytest --cov=bot --cov-report=html  # With coverage
-black bot/                          # Format
-ruff check bot/                     # Lint
 ```
 
 ## Critical Architecture Rules
@@ -133,7 +133,23 @@ User (1) → (N) Deck (1) → (N) Card (1) → (N) Review
 
 ### AI Features
 Use `AIService` from `bot/services/ai_service.py`:
-- `ask_question()`, `translate_word()`, `explain_grammar()`, `generate_card_from_word()`
+- `ask_question()` - General AI questions (Russian responses)
+- `translate_word()` - Greek-Russian bidirectional translation
+- `explain_grammar()` - Grammar explanations in Russian
+- `generate_card_from_word(word, source_language)` - Create card from Greek OR Russian word
+  - Accepts `source_language='greek'` or `source_language='russian'`
+  - Always adds Greek articles (o, n, to) for nouns
+
+### Messages Module
+All UI text is centralized in `bot/messages/`:
+- `common.py` - Shared buttons and error messages
+- `start.py`, `decks.py`, `cards.py`, `learning.py`, `statistics.py`, `ai.py`
+- All functions that display user content use `html.escape()` for security
+
+### Language Detection
+Use `bot/utils/language_detector.py`:
+- `detect_language(text)` - Returns 'greek', 'russian', or 'unknown'
+- `is_greek(text)`, `is_russian(text)` - Boolean checks
 
 ## Code Style
 
@@ -144,13 +160,6 @@ Use `AIService` from `bot/services/ai_service.py`:
 - **NO unused imports/variables**
 - Type hints everywhere
 - Modern syntax: `str | None` not `Optional[str]`
-
-## Testing
-
-- Use pytest with asyncio_mode = "auto"
-- Fixtures in `tests/conftest.py`
-- Coverage: 80%+ overall, 100% for core
-- Pre-commit: `black`, `ruff`, `pytest --cov`
 
 ## Important Patterns
 

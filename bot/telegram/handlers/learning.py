@@ -6,6 +6,8 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models.user import User
+from bot.messages import common as common_msg
+from bot.messages import learning as learn_msg
 from bot.services.deck_service import DeckService
 from bot.services.learning_service import LearningService
 from bot.telegram.keyboards.deck_keyboards import get_deck_list_keyboard
@@ -20,7 +22,7 @@ from bot.telegram.utils.callback_parser import parse_callback_int
 router = Router(name="learning")
 
 
-@router.message(F.text == "📖 Learn")
+@router.message(F.text == common_msg.BTN_LEARN)
 async def start_learning_deck_selection(message: Message, session: AsyncSession, user: User):
     """Start learning by selecting a deck.
 
@@ -34,15 +36,13 @@ async def start_learning_deck_selection(message: Message, session: AsyncSession,
 
     if not decks:
         await message.answer(
-            "❌ You don't have any decks yet.\n\n" "Create a deck and add some cards first!",
+            learn_msg.MSG_NO_DECKS_FOR_LEARNING,
             reply_markup=get_main_menu_keyboard(),
         )
         return
 
-    text = "📖 <b>Start Learning</b>\n\nSelect a deck to study:"
     keyboard = get_deck_list_keyboard(decks)
-
-    await message.answer(text, reply_markup=keyboard)
+    await message.answer(learn_msg.MSG_SELECT_DECK_FOR_LEARNING, reply_markup=keyboard)
 
 
 @router.callback_query(F.data.startswith("learn:"))
@@ -59,7 +59,7 @@ async def start_learning_session(
     """
     deck_id = parse_callback_int(callback.data)
     if deck_id is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     learning_service = LearningService(session)
@@ -68,11 +68,7 @@ async def start_learning_session(
     session_cards = await learning_service.get_learning_session(deck_id, max_cards=20)
 
     if not session_cards:
-        await callback.message.edit_text(
-            "✅ <b>Great job!</b>\n\n"
-            "You've reviewed all due cards in this deck.\n"
-            "Come back later for more practice!"
-        )
+        await callback.message.edit_text(learn_msg.MSG_ALL_CARDS_REVIEWED)
         await callback.answer()
         return
 
@@ -123,11 +119,7 @@ async def show_card_front(callback: CallbackQuery, state: FSMContext, session: A
     await state.update_data(current_card_id=card_id)
 
     progress = f"{current_index + 1}/{len(card_ids)}"
-    text = (
-        f"📖 <b>Learning Session</b> ({progress})\n\n"
-        f"<b>Question:</b>\n{card.front}\n\n"
-        f"Think of the answer, then click 'Show Answer'."
-    )
+    text = learn_msg.get_card_front_message(progress, card.front)
 
     await callback.message.edit_text(text, reply_markup=get_show_answer_keyboard())
     await callback.answer()
@@ -153,20 +145,11 @@ async def show_card_answer(callback: CallbackQuery, state: FSMContext, session: 
     card = await card_service.get_card(card_id)
 
     if not card:
-        await callback.answer("Card not found", show_alert=True)
+        await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
     progress = f"{current_index + 1}/{len(card_ids)}"
-    text = (
-        f"📖 <b>Learning Session</b> ({progress})\n\n"
-        f"<b>Question:</b>\n{card.front}\n\n"
-        f"<b>Answer:</b>\n{card.back}\n\n"
-    )
-
-    if card.example:
-        text += f"<b>Example:</b>\n{card.example}\n\n"
-
-    text += "How well did you know it?"
+    text = learn_msg.get_card_answer_message(progress, card.front, card.back, card.example)
 
     await callback.message.edit_text(text, reply_markup=get_quality_rating_keyboard())
     await callback.answer()
@@ -186,7 +169,7 @@ async def process_quality_rating(
     """
     quality = parse_callback_int(callback.data)
     if quality is None:
-        await callback.answer("Invalid data")
+        await callback.answer(common_msg.MSG_INVALID_DATA)
         return
 
     data = await state.get_data()
@@ -230,15 +213,9 @@ async def end_learning_session(callback: CallbackQuery, state: FSMContext):
 
     if cards_reviewed > 0:
         accuracy = (correct_count / cards_reviewed) * 100
-        text = (
-            f"🎉 <b>Session Complete!</b>\n\n"
-            f"<b>Cards Reviewed:</b> {cards_reviewed}\n"
-            f"<b>Correct Answers:</b> {correct_count}\n"
-            f"<b>Accuracy:</b> {accuracy:.1f}%\n\n"
-            f"Great work! Keep it up!"
-        )
+        text = learn_msg.get_session_complete_message(cards_reviewed, correct_count, accuracy)
     else:
-        text = "📖 <b>Session Ended</b>\n\nNo cards were reviewed."
+        text = learn_msg.MSG_SESSION_ENDED
 
     await callback.message.edit_text(text, reply_markup=get_session_end_keyboard())
     await callback.answer()
@@ -256,10 +233,8 @@ async def continue_learning(callback: CallbackQuery, session: AsyncSession, user
     deck_service = DeckService(session)
     decks = await deck_service.get_user_decks(user.id)
 
-    text = "📖 <b>Continue Learning</b>\n\nSelect a deck to study:"
     keyboard = get_deck_list_keyboard(decks)
-
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    await callback.message.edit_text(learn_msg.MSG_CONTINUE_LEARNING, reply_markup=keyboard)
     await callback.answer()
 
 
@@ -271,7 +246,7 @@ async def back_to_main_menu(callback: CallbackQuery):
         callback: Callback query
     """
     await callback.message.edit_text(
-        "🏠 <b>Main Menu</b>\n\nSelect an option:",
+        learn_msg.MSG_MAIN_MENU,
         reply_markup=get_main_menu_keyboard(),
     )
     await callback.answer()

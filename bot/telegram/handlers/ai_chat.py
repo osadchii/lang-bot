@@ -3,29 +3,22 @@
 from aiogram import F, Router
 from aiogram.types import Message
 
+from bot.messages import ai as ai_msg
+from bot.messages import common as common_msg
 from bot.services.ai_service import AIService
 from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
 
 router = Router(name="ai_chat")
 
 
-@router.message(F.text == "🤖 AI Assistant")
+@router.message(F.text == common_msg.BTN_AI_ASSISTANT)
 async def start_ai_assistant(message: Message):
     """Start AI assistant interaction.
 
     Args:
         message: Message
     """
-    text = (
-        "🤖 <b>AI Language Assistant</b>\n\n"
-        "I can help you with:\n"
-        "• Translations (Greek ↔ English)\n"
-        "• Grammar explanations\n"
-        "• General language questions\n\n"
-        "Just send me a message with your question!"
-    )
-
-    await message.answer(text, reply_markup=get_main_menu_keyboard())
+    await message.answer(ai_msg.MSG_AI_WELCOME, reply_markup=get_main_menu_keyboard())
 
 
 @router.message(F.text.startswith("/translate "))
@@ -35,19 +28,19 @@ async def translate_command(message: Message):
     Args:
         message: Message
     """
-    text_to_translate = message.text[11:].strip()  # Remove "/translate "
+    text_to_translate = message.text[11:].strip()
 
     if not text_to_translate:
-        await message.answer("Please provide text to translate.\n\n" "Example: /translate γεια σου")
+        await message.answer(ai_msg.MSG_TRANSLATE_HELP)
         return
 
-    thinking_msg = await message.answer("🤖 Translating...")
+    thinking_msg = await message.answer(ai_msg.MSG_TRANSLATING)
 
     ai_service = AIService()
     translation = await ai_service.translate_word(text_to_translate)
 
     await thinking_msg.delete()
-    await message.answer(f"<b>Translation:</b>\n\n{translation}")
+    await message.answer(ai_msg.get_translation_result(translation))
 
 
 @router.message(F.text.startswith("/grammar "))
@@ -57,21 +50,19 @@ async def grammar_command(message: Message):
     Args:
         message: Message
     """
-    greek_text = message.text[9:].strip()  # Remove "/grammar "
+    greek_text = message.text[9:].strip()
 
     if not greek_text:
-        await message.answer(
-            "Please provide Greek text to explain.\n\n" "Example: /grammar Το παιδί τρέχει"
-        )
+        await message.answer(ai_msg.MSG_GRAMMAR_HELP)
         return
 
-    thinking_msg = await message.answer("🤖 Analyzing grammar...")
+    thinking_msg = await message.answer(ai_msg.MSG_ANALYZING_GRAMMAR)
 
     ai_service = AIService()
     explanation = await ai_service.explain_grammar(greek_text)
 
     await thinking_msg.delete()
-    await message.answer(f"<b>Grammar Explanation:</b>\n\n{explanation}")
+    await message.answer(ai_msg.get_grammar_result(explanation))
 
 
 @router.message(
@@ -79,13 +70,13 @@ async def grammar_command(message: Message):
     & ~F.text.startswith("/")
     & ~F.text.in_(
         [
-            "📚 My Decks",
-            "📖 Learn",
-            "➕ Add Card",
-            "🤖 AI Assistant",
-            "📊 Statistics",
-            "❓ Help",
-            "❌ Cancel",
+            common_msg.BTN_MY_DECKS,
+            common_msg.BTN_LEARN,
+            common_msg.BTN_ADD_CARD,
+            common_msg.BTN_AI_ASSISTANT,
+            common_msg.BTN_STATISTICS,
+            common_msg.BTN_HELP,
+            common_msg.BTN_CANCEL,
         ]
     )
 )
@@ -95,16 +86,15 @@ async def handle_ai_question(message: Message):
     Args:
         message: Message
     """
-    # Check if message looks like a question or request
     question = message.text.strip()
 
     if len(question) < 3:
-        return  # Ignore very short messages
+        return
 
-    thinking_msg = await message.answer("🤖 Thinking...")
+    thinking_msg = await message.answer(ai_msg.MSG_THINKING)
 
     ai_service = AIService()
     response = await ai_service.ask_question(question)
 
     await thinking_msg.delete()
-    await message.answer(f"🤖 <b>AI Assistant:</b>\n\n{response}")
+    await message.answer(ai_msg.get_ai_response(response))

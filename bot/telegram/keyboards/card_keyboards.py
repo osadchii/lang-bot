@@ -4,6 +4,8 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.database.models.card import Card
+from bot.messages import cards as card_msg
+from bot.messages import common as common_msg
 
 
 def get_card_creation_method_keyboard(deck_id: int) -> InlineKeyboardMarkup:
@@ -17,9 +19,9 @@ def get_card_creation_method_keyboard(deck_id: int) -> InlineKeyboardMarkup:
     """
     builder = InlineKeyboardBuilder()
 
-    builder.button(text="✍️ Manual Entry", callback_data=f"create_card_manual:{deck_id}")
-    builder.button(text="🤖 AI Assistance", callback_data=f"create_card_ai:{deck_id}")
-    builder.button(text="❌ Cancel", callback_data=f"deck:{deck_id}")
+    builder.button(text=card_msg.BTN_MANUAL_ENTRY, callback_data=f"create_card_manual:{deck_id}")
+    builder.button(text=card_msg.BTN_AI_ASSISTANCE, callback_data=f"create_card_ai:{deck_id}")
+    builder.button(text=common_msg.BTN_CANCEL, callback_data=f"deck:{deck_id}")
 
     builder.adjust(1)
 
@@ -38,9 +40,9 @@ def get_card_actions_keyboard(card_id: int, deck_id: int) -> InlineKeyboardMarku
     """
     builder = InlineKeyboardBuilder()
 
-    builder.button(text="✏️ Edit", callback_data=f"edit_card:{card_id}")
-    builder.button(text="🗑 Delete", callback_data=f"delete_card:{card_id}")
-    builder.button(text="🔙 Back", callback_data=f"view_cards:{deck_id}")
+    builder.button(text=card_msg.BTN_EDIT_CARD, callback_data=f"edit_card:{card_id}")
+    builder.button(text=card_msg.BTN_DELETE_CARD, callback_data=f"delete_card:{card_id}")
+    builder.button(text=common_msg.BTN_BACK, callback_data=f"view_cards:{deck_id}")
 
     builder.adjust(2, 1)
 
@@ -69,14 +71,14 @@ def get_card_list_keyboard(
     # Pagination buttons
     nav_buttons = []
     if offset > 0:
-        nav_buttons.append(("⬅️ Previous", f"view_cards:{deck_id}:{offset - 10}"))
-    if len(cards) == 10:  # Assuming 10 cards per page
-        nav_buttons.append(("➡️ Next", f"view_cards:{deck_id}:{offset + 10}"))
+        nav_buttons.append((card_msg.BTN_PREVIOUS, f"view_cards:{deck_id}:{offset - 10}"))
+    if len(cards) == 10:
+        nav_buttons.append((card_msg.BTN_NEXT, f"view_cards:{deck_id}:{offset + 10}"))
 
     for text, callback in nav_buttons:
         builder.button(text=text, callback_data=callback)
 
-    builder.button(text="🔙 Back to Deck", callback_data=f"deck:{deck_id}")
+    builder.button(text=card_msg.BTN_BACK_TO_DECK, callback_data=f"deck:{deck_id}")
 
     builder.adjust(1)
 
@@ -95,8 +97,8 @@ def get_card_delete_confirm_keyboard(card_id: int, deck_id: int) -> InlineKeyboa
     """
     builder = InlineKeyboardBuilder()
 
-    builder.button(text="✅ Yes, Delete", callback_data=f"confirm_delete_card:{card_id}")
-    builder.button(text="❌ Cancel", callback_data=f"card:{card_id}")
+    builder.button(text=card_msg.BTN_CONFIRM_DELETE, callback_data=f"confirm_delete_card:{card_id}")
+    builder.button(text=common_msg.BTN_CANCEL, callback_data=f"card:{card_id}")
 
     builder.adjust(2)
 

@@ -5,13 +5,15 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.database.models.user import User
+from bot.messages import common as common_msg
+from bot.messages import statistics as stats_msg
 from bot.services.statistics_service import StatisticsService
 from bot.telegram.keyboards.main_menu import get_back_to_menu_keyboard
 
 router = Router(name="statistics")
 
 
-@router.message(F.text == "📊 Statistics")
+@router.message(F.text == common_msg.BTN_STATISTICS)
 @router.callback_query(F.data == "statistics")
 async def show_statistics(event: Message | CallbackQuery, session: AsyncSession, user: User):
     """Show user statistics.
@@ -32,31 +34,19 @@ async def show_statistics(event: Message | CallbackQuery, session: AsyncSession,
     # Get weekly stats
     weekly = await stats_service.get_weekly_stats(user.id)
 
-    # Format time
-    def format_time(seconds: int) -> str:
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        if hours > 0:
-            return f"{hours}h {minutes}m"
-        return f"{minutes}m"
-
-    text = (
-        "📊 <b>Your Learning Statistics</b>\n\n"
-        "<b>📈 Overall:</b>\n"
-        f"• Total Reviews: {overall['total_reviews']}\n"
-        f"• Accuracy: {overall['accuracy']:.1f}%\n"
-        f"• Total Study Time: {format_time(overall['total_time_seconds'])}\n"
-        f"• Current Streak: {overall['current_streak']} days 🔥\n"
-        f"• Days Active: {overall['total_days_active']}\n\n"
-        "<b>📅 Today:</b>\n"
-        f"• Reviews: {daily['total_reviews']}\n"
-        f"• Accuracy: {daily['accuracy']:.1f}%\n"
-        f"• Study Time: {format_time(daily['total_time_seconds'])}\n\n"
-        "<b>📆 This Week:</b>\n"
-        f"• Total Reviews: {weekly['total_reviews']}\n"
-        f"• Avg Daily Reviews: {weekly['average_daily_reviews']:.1f}\n"
-        f"• Days Active: {weekly['days_active']}/7\n"
-        f"• Study Time: {format_time(weekly['total_time_seconds'])}"
+    text = stats_msg.get_statistics_message(
+        total_reviews=overall["total_reviews"],
+        accuracy=overall["accuracy"],
+        total_time_seconds=overall["total_time_seconds"],
+        current_streak=overall["current_streak"],
+        total_days_active=overall["total_days_active"],
+        daily_reviews=daily["total_reviews"],
+        daily_accuracy=daily["accuracy"],
+        daily_time_seconds=daily["total_time_seconds"],
+        weekly_reviews=weekly["total_reviews"],
+        weekly_avg_daily=weekly["average_daily_reviews"],
+        weekly_days_active=weekly["days_active"],
+        weekly_time_seconds=weekly["total_time_seconds"],
     )
 
     keyboard = get_back_to_menu_keyboard()
