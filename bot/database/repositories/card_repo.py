@@ -62,7 +62,11 @@ class CardRepository(BaseRepository[Card]):
 
         query = (
             select(Card)
-            .where(Card.deck_id == deck_id, Card.next_review <= current_time)
+            .where(
+                Card.deck_id == deck_id,
+                Card.next_review <= current_time,
+                Card.repetitions > 0,  # Exclude new cards (they're handled separately)
+            )
             .order_by(Card.next_review.asc())
         )
 
@@ -106,7 +110,11 @@ class CardRepository(BaseRepository[Card]):
         query = (
             select(func.count())
             .select_from(Card)
-            .where(Card.deck_id == deck_id, Card.next_review <= current_time)
+            .where(
+                Card.deck_id == deck_id,
+                Card.next_review <= current_time,
+                Card.repetitions > 0,  # Exclude new cards (they're handled separately)
+            )
         )
         result = await self.session.execute(query)
         return result.scalar_one()
