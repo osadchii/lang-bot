@@ -1,5 +1,7 @@
 """Learning session handlers."""
 
+import random
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -87,7 +89,7 @@ async def start_learning_session(
 
 
 async def show_card_front(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    """Show the front of the current card.
+    """Show a random side of the current card as the question.
 
     Args:
         callback: Callback query
@@ -115,11 +117,22 @@ async def show_card_front(callback: CallbackQuery, state: FSMContext, session: A
         await show_card_front(callback, state, session)
         return
 
-    # Store current card
-    await state.update_data(current_card_id=card_id)
+    # Randomly choose which side to show as question
+    show_front_as_question = random.choice([True, False])
+
+    # Store current card and direction
+    await state.update_data(current_card_id=card_id, show_front_as_question=show_front_as_question)
+
+    # Determine question text and direction
+    if show_front_as_question:
+        question_text = card.front
+        direction = learn_msg.DIRECTION_GREEK_TO_RUSSIAN
+    else:
+        question_text = card.back
+        direction = learn_msg.DIRECTION_RUSSIAN_TO_GREEK
 
     progress = f"{current_index + 1}/{len(card_ids)}"
-    text = learn_msg.get_card_front_message(progress, card.front)
+    text = learn_msg.get_card_front_message(progress, question_text, direction)
 
     await callback.message.edit_text(text, reply_markup=get_show_answer_keyboard())
     await callback.answer()
@@ -138,6 +151,7 @@ async def show_card_answer(callback: CallbackQuery, state: FSMContext, session: 
     card_id = data.get("current_card_id")
     card_ids = data.get("card_ids", [])
     current_index = data.get("current_index", 0)
+    show_front_as_question = data.get("show_front_as_question", True)
 
     from bot.services.card_service import CardService
 
@@ -148,8 +162,22 @@ async def show_card_answer(callback: CallbackQuery, state: FSMContext, session: 
         await callback.answer(common_msg.MSG_INVALID_DATA, show_alert=True)
         return
 
+    # Determine question/answer based on stored direction
+    if show_front_as_question:
+        question_text = card.front
+        answer_text = card.back
+        direction = learn_msg.DIRECTION_GREEK_TO_RUSSIAN
+        example = card.example  # Show example when Greek is question
+    else:
+        question_text = card.back
+        answer_text = card.front
+        direction = learn_msg.DIRECTION_RUSSIAN_TO_GREEK
+        example = None  # Don't show example when Russian is question
+
     progress = f"{current_index + 1}/{len(card_ids)}"
-    text = learn_msg.get_card_answer_message(progress, card.front, card.back, card.example)
+    text = learn_msg.get_card_answer_message(
+        progress, question_text, answer_text, example, direction
+    )
 
     await callback.message.edit_text(text, reply_markup=get_quality_rating_keyboard())
     await callback.answer()

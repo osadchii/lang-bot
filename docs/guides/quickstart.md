@@ -72,6 +72,8 @@ python -m bot
 1. **Create a Deck**: Tap "My Decks" button, then "Create New Deck"
 2. **Add Cards**: Tap "Add Card" button, choose a deck, then enter a word
 3. **Start Learning**: Tap "Learn" button, select a deck, and review cards
+   - Cards show a random side (Greek or Russian) as the question
+   - Direction indicator (`EL -> RU` or `RU -> EL`) shows which way you're being tested
 4. **Try Translation**: Simply type any Greek or Russian word - the bot will translate it and offer to add it as a card
 5. **Ask Questions**: Type any language question in Russian - the bot understands context and remembers your conversation
 

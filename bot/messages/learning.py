@@ -2,6 +2,10 @@
 
 import html
 
+# Direction indicators for card display
+DIRECTION_GREEK_TO_RUSSIAN = "EL -> RU"
+DIRECTION_RUSSIAN_TO_GREEK = "RU -> EL"
+
 # Learning start
 MSG_NO_DECKS_FOR_LEARNING = (
     "У тебя пока нет колод.\n\nСоздай колоду и добавь карточки, чтобы начать обучение!"
@@ -16,39 +20,43 @@ MSG_CONTINUE_LEARNING = "<b>Продолжить обучение</b>\n\nВыб�
 
 
 # Learning session
-def get_card_front_message(progress: str, front: str) -> str:
+def get_card_front_message(progress: str, question: str, direction: str) -> str:
     """Get card front display message.
 
     Args:
         progress: Progress string (e.g., "1/10")
-        front: Card front text
+        question: The question text (can be front or back depending on direction)
+        direction: Direction hint (e.g., "EL -> RU")
 
     Returns:
         Card front message
     """
     return (
-        f"<b>Сессия обучения</b> ({progress})\n\n"
-        f"<b>Вопрос:</b>\n{html.escape(front)}\n\n"
+        f"<b>Сессия обучения</b> ({progress}) <code>{direction}</code>\n\n"
+        f"<b>Вопрос:</b>\n{html.escape(question)}\n\n"
         f"Подумай над ответом, затем нажми 'Показать ответ'."
     )
 
 
-def get_card_answer_message(progress: str, front: str, back: str, example: str | None) -> str:
+def get_card_answer_message(
+    progress: str, question: str, answer: str, example: str | None, direction: str
+) -> str:
     """Get card answer display message.
 
     Args:
         progress: Progress string
-        front: Card front text
-        back: Card back text
-        example: Example sentence
+        question: The question text
+        answer: The answer text
+        example: Example sentence (only shown for Greek->Russian direction)
+        direction: Direction hint (e.g., "EL -> RU")
 
     Returns:
         Card answer message
     """
     text = (
-        f"<b>Сессия обучения</b> ({progress})\n\n"
-        f"<b>Вопрос:</b>\n{html.escape(front)}\n\n"
-        f"<b>Ответ:</b>\n{html.escape(back)}\n\n"
+        f"<b>Сессия обучения</b> ({progress}) <code>{direction}</code>\n\n"
+        f"<b>Вопрос:</b>\n{html.escape(question)}\n\n"
+        f"<b>Ответ:</b>\n{html.escape(answer)}\n\n"
     )
     if example:
         text += f"<b>Пример:</b>\n{html.escape(example)}\n\n"

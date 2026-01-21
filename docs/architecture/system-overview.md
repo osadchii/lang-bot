@@ -125,9 +125,9 @@ All relationships use `ondelete="CASCADE"` for referential integrity.
 
 ### Example: User Reviews a Card
 
-1. **User Input**: User clicks "Remembered" button (quality=3)
+1. **User Input**: User clicks "Learn" button and selects a deck
    ```
-   CallbackQuery(data="quality:3")
+   CallbackQuery(data="learn:1")
    ```
 
 2. **Middleware Chain**:
@@ -136,21 +136,21 @@ All relationships use `ondelete="CASCADE"` for referential integrity.
    - `DatabaseMiddleware`: Injects `session: AsyncSession`
    - `UserContextMiddleware`: Injects `user: User` (auto-creates if new)
 
-3. **Handler** (`learning.py:process_quality_rating`):
-   - Parses callback data safely
-   - Retrieves FSM state data
-   - Calls service layer
+3. **Handler** (`learning.py:show_card_front`):
+   - Gets card from session
+   - **Randomly selects which side to show** (Greek or Russian)
+   - Stores direction in FSM state (`show_front_as_question: bool`)
+   - Shows card with direction indicator (`EL -> RU` or `RU -> EL`)
 
-4. **Service** (`LearningService.process_card_review`):
-   - Validates input
-   - Calls SRS algorithm (`calculate_next_review`)
-   - Validates SRS result
-   - Updates card via repository
-   - Creates review record
+4. **User clicks "Show Answer"**:
+   - Handler retrieves stored direction from FSM state
+   - Shows the opposite side as the answer
+   - Example sentence shown only for Greek->Russian direction
 
-5. **Repository** (`CardRepository`):
-   - Executes database update
-   - Returns updated card
+5. **User rates the card** (quality=0, 3, or 5):
+   - `LearningService.process_card_review()` called
+   - SRS algorithm calculates next review
+   - Card updated, next card shown
 
 6. **Response**:
    - Handler sends next card or session summary
@@ -381,6 +381,14 @@ The bot uses the **SM-2 algorithm** for optimal card scheduling:
 - 0 = Forgot (completely forgot)
 - 3 = Remembered (correct response)
 - 5 = Easy (perfect recall)
+
+### Bidirectional Testing
+
+During review, cards are shown with a **random side** as the question:
+- **Greek -> Russian** (`EL -> RU`): Shows Greek word, asks for Russian translation
+- **Russian -> Greek** (`RU -> EL`): Shows Russian word, asks for Greek translation
+
+The direction is stored in FSM state and the SRS algorithm works identically regardless of direction.
 
 ### Algorithm Location
 `bot/core/spaced_repetition.py:calculate_next_review()`
