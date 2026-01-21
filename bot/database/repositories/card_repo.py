@@ -145,3 +145,34 @@ class CardRepository(BaseRepository[Card]):
         )
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def search_user_cards(
+        self,
+        user_id: int,
+        search_term: str,
+        limit: int = 10,
+    ) -> list[tuple[Card, int]]:
+        """Search all user's cards across all decks.
+
+        Args:
+            user_id: User ID
+            search_term: Search term
+            limit: Maximum results
+
+        Returns:
+            List of (Card, deck_id) tuples for matching cards
+        """
+        from bot.database.models.deck import Deck
+
+        search_pattern = f"%{search_term}%"
+        query = (
+            select(Card, Deck.id)
+            .join(Deck, Card.deck_id == Deck.id)
+            .where(
+                Deck.user_id == user_id,
+                (Card.front.ilike(search_pattern)) | (Card.back.ilike(search_pattern)),
+            )
+            .limit(limit)
+        )
+        result = await self.session.execute(query)
+        return list(result.tuples().all())

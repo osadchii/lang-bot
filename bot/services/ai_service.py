@@ -338,3 +338,101 @@ class AIService:
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
             return ""
+
+    async def suggest_deck_for_word(
+        self,
+        word: str,
+        translation: str,
+        deck_names: list[str],
+    ) -> str | None:
+        """Suggest the most suitable deck for a word from existing decks.
+
+        Args:
+            word: Greek word
+            translation: Russian translation
+            deck_names: List of user's existing deck names
+
+        Returns:
+            Best matching deck name or None if no suitable deck
+        """
+        if not deck_names:
+            return None
+
+        try:
+            prompt = (
+                f"Слово: {word} ({translation})\n\n"
+                f"Колоды пользователя: {', '.join(deck_names)}\n\n"
+                f"Какая колода лучше всего подходит для этого слова по смыслу/категории?\n"
+                f"Ответь ТОЛЬКО названием колоды из списка или NONE если ни одна не подходит."
+            )
+
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Ты помогаешь сортировать слова по тематическим колодам. "
+                            "Отвечай только названием колоды или NONE."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=50,
+                temperature=0.3,
+            )
+
+            result = response.choices[0].message.content or ""
+            result = result.strip()
+
+            if result.upper() == "NONE":
+                return None
+
+            # Find matching deck (case-insensitive)
+            for name in deck_names:
+                if name.lower() == result.lower():
+                    return name
+
+            return None
+
+        except Exception as e:
+            logger.warning(f"Failed to suggest deck: {e}")
+            return None
+
+    async def generate_deck_name(self, word: str, translation: str) -> str:
+        """Generate a suitable deck name for a word category.
+
+        Args:
+            word: Greek word
+            translation: Russian translation
+
+        Returns:
+            Suggested deck name in Russian
+        """
+        try:
+            prompt = (
+                f"Слово: {word} ({translation})\n\n"
+                f"Придумай короткое название колоды на русском для категории этого слова.\n"
+                f"Например: Еда, Транспорт, Семья, Одежда, Дом, Работа.\n"
+                f"Ответь ТОЛЬКО названием (1-3 слова), без пояснений."
+            )
+
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Ты генерируешь короткие названия категорий. Отвечай только названием.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=30,
+                temperature=0.5,
+            )
+
+            result = response.choices[0].message.content or "Разное"
+            return result.strip()[:50]
+
+        except Exception as e:
+            logger.warning(f"Failed to generate deck name: {e}")
+            return "Разное"

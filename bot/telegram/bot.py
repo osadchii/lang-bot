@@ -65,6 +65,7 @@ def setup_handlers(dp: Dispatcher) -> None:
         learning,
         start,
         statistics,
+        translation,
     )
 
     # Register routers
@@ -72,6 +73,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     dp.include_router(deck_management.router)
     dp.include_router(card_management.router)
     dp.include_router(learning.router)
+    dp.include_router(translation.router)  # Before ai_chat (more specific)
     dp.include_router(ai_chat.router)
     dp.include_router(statistics.router)
     dp.include_router(errors.router)  # Error handler should be last
