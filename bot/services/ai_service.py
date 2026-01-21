@@ -19,12 +19,18 @@ class AIService:
         self.max_tokens = settings.openai_max_tokens
         self.temperature = settings.openai_temperature
 
-    async def ask_question(self, message: str, context: str | None = None) -> str:
+    async def ask_question(
+        self,
+        message: str,
+        context: str | None = None,
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> str:
         """Ask a question to the AI assistant.
 
         Args:
             message: User's question
-            context: Optional context for the conversation
+            context: Optional context for the conversation (legacy support)
+            conversation_history: List of previous messages [{"role": "user/assistant", "content": "..."}]
 
         Returns:
             AI's response
@@ -44,6 +50,9 @@ class AIService:
 
             if context:
                 messages.append({"role": "system", "content": f"Контекст: {context}"})
+
+            if conversation_history:
+                messages.extend(conversation_history)
 
             messages.append({"role": "user", "content": message})
 

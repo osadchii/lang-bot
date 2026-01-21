@@ -91,6 +91,19 @@ class Settings(BaseSettings):
         description="Throttle time between user requests in seconds",
     )
 
+    # Conversation History Settings
+    conversation_history_limit: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Number of recent messages to pass to AI for context",
+    )
+    conversation_retention_days: int = Field(
+        default=30,
+        ge=1,
+        description="Number of days to retain conversation history",
+    )
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

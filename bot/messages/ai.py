@@ -1,5 +1,7 @@
 """AI assistant messages in Russian."""
 
+import html
+
 MSG_AI_WELCOME = (
     "<b>ИИ-помощник по языку</b>\n\n"
     "Я могу помочь тебе с:\n"
@@ -25,7 +27,7 @@ def get_translation_result(translation: str) -> str:
     Returns:
         Formatted translation message
     """
-    return f"<b>Перевод:</b>\n\n{translation}"
+    return f"<b>Перевод:</b>\n\n{html.escape(translation)}"
 
 
 def get_grammar_result(explanation: str) -> str:
@@ -37,7 +39,7 @@ def get_grammar_result(explanation: str) -> str:
     Returns:
         Formatted explanation message
     """
-    return f"<b>Грамматический разбор:</b>\n\n{explanation}"
+    return f"<b>Грамматический разбор:</b>\n\n{html.escape(explanation)}"
 
 
 def get_ai_response(response: str) -> str:
@@ -49,7 +51,21 @@ def get_ai_response(response: str) -> str:
     Returns:
         Formatted AI response message
     """
-    return f"<b>ИИ-помощник:</b>\n\n{response}"
+    return f"<b>ИИ-помощник:</b>\n\n{html.escape(response)}"
+
+
+def get_history_cleared_message(count: int) -> str:
+    """Get message for cleared history.
+
+    Args:
+        count: Number of deleted messages
+
+    Returns:
+        Formatted message
+    """
+    if count == 0:
+        return "История разговора уже пуста."
+    return f"История разговора очищена. Удалено сообщений: {count}"
 
 
 # AI error messages

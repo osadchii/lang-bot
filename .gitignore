@@ -137,9 +137,6 @@ Thumbs.db
 *.db
 *.sqlite
 
-# Claude Code
-.claude/
-
 # Docker & CI/CD
 postgres_data/
 keys.txt

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from bot.database.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from bot.database.models.conversation import ConversationMessage
     from bot.database.models.deck import Deck
     from bot.database.models.learning_stats import LearningStats
     from bot.database.models.review import Review
@@ -36,6 +37,9 @@ class User(Base, TimestampMixin):
     )
     learning_stats: Mapped[list[LearningStats]] = relationship(
         "LearningStats", back_populates="user", cascade="all, delete-orphan"
+    )
+    conversation_messages: Mapped[list[ConversationMessage]] = relationship(
+        "ConversationMessage", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

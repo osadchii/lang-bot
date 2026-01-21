@@ -1,6 +1,7 @@
 """Database models."""
 
 from bot.database.models.card import Card
+from bot.database.models.conversation import ConversationMessage, MessageRole
 from bot.database.models.deck import Deck
 from bot.database.models.learning_stats import LearningStats
 from bot.database.models.review import Review
@@ -12,4 +13,6 @@ __all__ = [
     "Card",
     "Review",
     "LearningStats",
+    "ConversationMessage",
+    "MessageRole",
 ]
