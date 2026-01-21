@@ -1,6 +1,7 @@
 """Learning session handlers."""
 
 import random
+import time
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -120,8 +121,12 @@ async def show_card_front(callback: CallbackQuery, state: FSMContext, session: A
     # Randomly choose which side to show as question
     show_front_as_question = random.choice([True, False])
 
-    # Store current card and direction
-    await state.update_data(current_card_id=card_id, show_front_as_question=show_front_as_question)
+    # Store current card, direction, and timestamp for time tracking
+    await state.update_data(
+        current_card_id=card_id,
+        show_front_as_question=show_front_as_question,
+        card_shown_at=time.time(),
+    )
 
     # Determine question text and direction
     if show_front_as_question:
@@ -205,10 +210,18 @@ async def process_quality_rating(
     current_index = data.get("current_index", 0)
     cards_reviewed = data.get("cards_reviewed", 0)
     correct_count = data.get("correct_count", 0)
+    card_shown_at = data.get("card_shown_at")
+
+    # Calculate time spent on this card (capped at 10 minutes)
+    time_spent = None
+    if card_shown_at is not None:
+        time_spent = min(int(time.time() - card_shown_at), 600)
 
     # Process the review
     learning_service = LearningService(session)
-    await learning_service.process_card_review(card_id=card_id, user_id=user.id, quality=quality)
+    await learning_service.process_card_review(
+        card_id=card_id, user_id=user.id, quality=quality, time_spent=time_spent
+    )
 
     # Update statistics
     cards_reviewed += 1
