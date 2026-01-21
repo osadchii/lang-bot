@@ -40,10 +40,13 @@ system-architect (if major) → refactor-cleaner → code-reviewer → documenta
 
 ## Rules
 
-1. ALWAYS use code-reviewer after changes
-2. Use system-architect for complex features first
-3. Use refactor-cleaner for complex implementations
-4. Auto-trigger documentation-agent on API/feature changes
+### MANDATORY BEFORE PUSH (NON-NEGOTIABLE)
+1. **code-reviewer** - Run for ANY code change, no exceptions
+2. **documentation-agent** - Run for ANY feature/behavior change
+
+### General
+3. Use system-architect for complex features first
+4. Use refactor-cleaner for complex implementations
 5. Use devops-engineer for deployment tasks
 
 ## Handoff Requirements
@@ -70,9 +73,19 @@ When delegating, provide:
 - Documentation-only changes
 - Configuration updates
 
+## Pre-Push Checklist
+
+Before EVERY push, complete these steps IN ORDER:
+1. [ ] Run `make verify` (lint, format, types, tests)
+2. [ ] Run **code-reviewer** agent
+3. [ ] Run **documentation-agent** (if feature/behavior changed)
+4. [ ] Address any feedback from agents
+5. [ ] Commit and push
+
 ## Never
 
-- Skip code-reviewer for significant changes
+- Push without running code-reviewer
+- Push feature changes without documentation-agent
 - Delegate simple tasks to system-architect
 - Ignore agent feedback
-- Commit without review
+- Skip the pre-push checklist
