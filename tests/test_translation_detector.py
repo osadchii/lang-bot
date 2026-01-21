@@ -129,6 +129,22 @@ class TestDetectTranslationRequest:
         assert result.word == expected_word
         assert result.source_language == expected_lang
 
+    @pytest.mark.parametrize(
+        "text,expected_word,expected_lang",
+        [
+            ("добавь ухо", "ухо", "russian"),
+            ("добавь σπίτι", "σπίτι", "greek"),
+            ("Добавь кошка", "кошка", "russian"),
+            ("добавь καλημέρα", "καλημέρα", "greek"),
+        ],
+    )
+    def test_pattern_dobav_simple(self, text: str, expected_word: str, expected_lang: str):
+        """Test simple 'добавь X' pattern."""
+        result = detect_translation_request(text)
+        assert result is not None
+        assert result.word == expected_word
+        assert result.source_language == expected_lang
+
 
 class TestSingleWordDetection:
     """Tests for single word translation request detection."""

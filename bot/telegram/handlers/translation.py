@@ -3,6 +3,7 @@
 import hashlib
 
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,6 +42,7 @@ def _hash_word(word: str) -> str:
 
 
 @router.message(
+    StateFilter(None),
     F.text
     & ~F.text.startswith("/")
     & ~F.text.in_(
@@ -51,7 +53,7 @@ def _hash_word(word: str) -> str:
             common_msg.BTN_STATISTICS,
             common_msg.BTN_CANCEL,
         ]
-    )
+    ),
 )
 async def handle_potential_translation(
     message: Message,
@@ -72,11 +74,6 @@ async def handle_potential_translation(
         user_created: Whether user was just created
         state: FSM context
     """
-    # Check if in FSM state (waiting for deck name)
-    current_state = await state.get_state()
-    if current_state == TranslationAddCard.waiting_for_deck_name:
-        return  # Let the deck name handler process this
-
     request = detect_translation_request(message.text)
     if not request:
         return  # Not a translation request, let other handlers process

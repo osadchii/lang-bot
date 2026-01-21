@@ -46,6 +46,8 @@ TRANSLATION_PATTERNS = [
     re.compile(r"^запомни\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
     # "сохрани X"
     re.compile(r"^сохрани\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
+    # "добавь X" (simple add command)
+    re.compile(r"^добавь\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
 ]
 
 
