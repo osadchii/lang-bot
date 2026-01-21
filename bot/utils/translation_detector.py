@@ -36,6 +36,16 @@ TRANSLATION_PATTERNS = [
     re.compile(r"^['\"]?(.+?)['\"]?\s+по[- ]?гречески\s*\??$", re.IGNORECASE),
     # "X по-русски"
     re.compile(r"^['\"]?(.+?)['\"]?\s+по[- ]?русски\s*\??$", re.IGNORECASE),
+    # "добавь в карточки X"
+    re.compile(r"^добавь\s+в\s+карточки\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
+    # "добавь X в карточки"
+    re.compile(r"^добавь\s+['\"]?(.+?)['\"]?\s+в\s+карточки\s*$", re.IGNORECASE),
+    # "добавь карточку X"
+    re.compile(r"^добавь\s+карточку\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
+    # "запомни X"
+    re.compile(r"^запомни\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
+    # "сохрани X"
+    re.compile(r"^сохрани\s+['\"]?(.+?)['\"]?\s*$", re.IGNORECASE),
 ]
 
 
