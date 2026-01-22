@@ -1479,6 +1479,7 @@ Response format:
 | Start cases | `exercise:cases` | `exercise:cases` |
 | Next task | `exercise:next` | `exercise:next` |
 | Skip task | `exercise:skip` | `exercise:skip` |
+| Show answer | `exercise:show_answer` | `exercise:show_answer` |
 | End session | `exercise:end` | `exercise:end` |
 | Add AI words | `exercise:add_words` | `exercise:add_words` |
 | Skip adding words | `exercise:skip_words` | `exercise:skip_words` |
@@ -1520,7 +1521,8 @@ Response format:
 |                           |
 | Напиши ответ:             |
 +---------------------------+
-| [Пропустить] [Завершить]  |
+| [Показать ответ] [Пропустить] |
+| [Завершить]               |
 +---------------------------+
      |
      v (user types answer)

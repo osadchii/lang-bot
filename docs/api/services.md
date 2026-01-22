@@ -742,6 +742,31 @@ result = await exercise_service.verify_answer(
 # result.feedback = "Правильно! Глагол γραφω относится к первому спряжению..."
 ```
 
+#### `get_answer_explanation(word: str, translation: str, expected_answer: str, task_hint: str, exercise_type: ExerciseType) -> str`
+
+Get grammar explanation for the correct answer. Used when user requests to see the answer without attempting.
+
+**Parameters**:
+- `word` (str): Original Greek word
+- `translation` (str): Russian translation
+- `expected_answer` (str): The correct answer
+- `task_hint` (str): Grammar hint (tense/case/person)
+- `exercise_type` (ExerciseType): Type of exercise
+
+**Returns**: Grammar explanation in Russian (empty string if AI call fails)
+
+**Example**:
+```python
+explanation = await exercise_service.get_answer_explanation(
+    word="γραφω",
+    translation="писать",
+    expected_answer="εγραψα",
+    task_hint="Αοριστος",
+    exercise_type=ExerciseType.TENSES,
+)
+# Returns: "Глагол γραφω в аористе образует форму εγραψα..."
+```
+
 ---
 
 ## StatisticsService
@@ -808,5 +833,5 @@ except ValueError:
 
 ---
 
-**Last Updated**: 2026-01-21
+**Last Updated**: 2026-01-22
 **Maintained by**: Documentation Agent

@@ -283,6 +283,70 @@ async def skip_task(
     await callback.answer("Пропущено")
 
 
+@router.callback_query(F.data == "exercise:show_answer")
+async def show_answer(
+    callback: CallbackQuery,
+    session: AsyncSession,
+    state: FSMContext,
+):
+    """Show the correct answer for current task.
+
+    Args:
+        callback: Callback query
+        session: Database session
+        state: FSM state
+    """
+    data = await state.get_data()
+    current_task = data.get("current_task")
+    exercise_type = data.get("exercise_type")
+
+    if not current_task:
+        await callback.answer(common_msg.MSG_ERROR_GENERIC)
+        await state.clear()
+        return
+
+    # Update statistics - count as attempted but wrong
+    total_count = data.get("total_count", 0) + 1
+    correct_count = data.get("correct_count", 0)  # Don't increment
+    ai_words = data.get("ai_words", [])
+
+    # If word was from AI, add to list for later
+    if current_task["is_from_ai"]:
+        ai_words.append(
+            {
+                "word": current_task["word"],
+                "translation": current_task["translation"],
+            }
+        )
+
+    await state.update_data(
+        total_count=total_count,
+        correct_count=correct_count,
+        ai_words=ai_words,
+    )
+
+    # Generate feedback using AI (optional, for grammar explanation)
+    exercise_service = ExerciseService(session)
+
+    feedback = await exercise_service.get_answer_explanation(
+        word=current_task["word"],
+        translation=current_task["translation"],
+        expected_answer=current_task["expected_answer"],
+        task_hint=current_task["task_hint"],
+        exercise_type=ExerciseType(exercise_type),
+    )
+
+    # Show answer with feedback keyboard (same as after wrong answer)
+    text = ex_msg.get_shown_answer_message(
+        correct_answer=current_task["expected_answer"],
+        feedback=feedback,
+    )
+
+    await callback.message.delete()
+    await callback.message.answer(text, reply_markup=get_feedback_keyboard())
+    await callback.answer()
+
+
 @router.callback_query(F.data == "exercise:end")
 async def end_session(callback: CallbackQuery, state: FSMContext):
     """End the exercise session.

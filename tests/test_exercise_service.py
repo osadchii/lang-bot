@@ -1,5 +1,10 @@
 """Tests for exercise service variety improvements."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from bot.messages.exercises import get_shown_answer_message
 from bot.services.exercise_service import (
     AI_SUPPLEMENT_COUNT,
     MAX_EXERCISE_HISTORY,
@@ -182,3 +187,141 @@ class TestWordFiltering:
 
         assert not service._is_verb("ο ανθρωπος")
         assert not service._is_verb("καλος")
+
+
+class TestShownAnswerMessage:
+    """Tests for get_shown_answer_message function."""
+
+    def test_formats_answer_correctly(self):
+        """Test that answer is formatted correctly."""
+        result = get_shown_answer_message(
+            correct_answer="εγραψα",
+            feedback="This is the aorist form.",
+        )
+
+        assert "<b>Ответ:</b>" in result
+        assert "εγραψα" in result
+        assert "This is the aorist form." in result
+
+    def test_escapes_html_in_answer(self):
+        """Test that HTML is escaped in the answer."""
+        result = get_shown_answer_message(
+            correct_answer="<script>alert('xss')</script>",
+            feedback="test",
+        )
+
+        assert "<script>" not in result
+        assert "&lt;script&gt;" in result
+
+    def test_escapes_html_in_feedback(self):
+        """Test that HTML is escaped in the feedback."""
+        result = get_shown_answer_message(
+            correct_answer="answer",
+            feedback="<b>malicious</b>",
+        )
+
+        assert "&lt;b&gt;malicious&lt;/b&gt;" in result
+
+    def test_handles_empty_feedback(self):
+        """Test that empty feedback is handled correctly."""
+        result = get_shown_answer_message(
+            correct_answer="answer",
+            feedback="",
+        )
+
+        assert "<b>Ответ:</b>" in result
+        assert "answer" in result
+
+
+class TestGetAnswerExplanation:
+    """Tests for get_answer_explanation method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_explanation_on_success(self, db_session):
+        """Test that explanation is returned on successful API call."""
+        service = ExerciseService(db_session)
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "This is a grammar explanation."
+
+        with patch.object(
+            service.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+
+            result = await service.get_answer_explanation(
+                word="γραφω",
+                translation="писать",
+                expected_answer="εγραψα",
+                task_hint="Αοριστος",
+                exercise_type=ExerciseType.TENSES,
+            )
+
+            assert result == "This is a grammar explanation."
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_string_on_api_error(self, db_session):
+        """Test that empty string is returned on API error."""
+        service = ExerciseService(db_session)
+
+        with patch.object(
+            service.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            from openai import APIError
+
+            mock_create.side_effect = APIError(message="API error", request=MagicMock(), body=None)
+
+            result = await service.get_answer_explanation(
+                word="γραφω",
+                translation="писать",
+                expected_answer="εγραψα",
+                task_hint="Αοριστος",
+                exercise_type=ExerciseType.TENSES,
+            )
+
+            assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_string_on_unexpected_error(self, db_session):
+        """Test that empty string is returned on unexpected error."""
+        service = ExerciseService(db_session)
+
+        with patch.object(
+            service.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.side_effect = Exception("Unexpected error")
+
+            result = await service.get_answer_explanation(
+                word="γραφω",
+                translation="писать",
+                expected_answer="εγραψα",
+                task_hint="Αοριστος",
+                exercise_type=ExerciseType.TENSES,
+            )
+
+            assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_handles_none_content(self, db_session):
+        """Test that None content is handled correctly."""
+        service = ExerciseService(db_session)
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = None
+
+        with patch.object(
+            service.client.chat.completions, "create", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = mock_response
+
+            result = await service.get_answer_explanation(
+                word="γραφω",
+                translation="писать",
+                expected_answer="εγραψα",
+                task_hint="Αοριστος",
+                exercise_type=ExerciseType.TENSES,
+            )
+
+            assert result == ""

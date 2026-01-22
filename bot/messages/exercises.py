@@ -102,6 +102,26 @@ def get_incorrect_answer_message(
 BTN_END_SESSION = "Завершить"
 BTN_NEXT_TASK = "Следующее"
 BTN_SKIP_TASK = "Пропустить"
+BTN_SHOW_ANSWER = "Показать ответ"
+
+
+def get_shown_answer_message(
+    correct_answer: str,
+    feedback: str,
+) -> str:
+    """Get message when user requests to see the answer.
+
+    Args:
+        correct_answer: The correct answer
+        feedback: Grammar explanation (optional)
+
+    Returns:
+        Shown answer message
+    """
+    text = f"<b>Ответ:</b> {html.escape(correct_answer)}\n\n"
+    if feedback:
+        text += f"{html.escape(feedback)}"
+    return text
 
 
 def get_session_complete_message(

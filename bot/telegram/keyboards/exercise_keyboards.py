@@ -28,14 +28,15 @@ def get_task_keyboard() -> InlineKeyboardMarkup:
     """Get keyboard shown during task (while waiting for answer).
 
     Returns:
-        Inline keyboard with skip/end options
+        Inline keyboard with show answer/skip/end options
     """
     builder = InlineKeyboardBuilder()
 
+    builder.button(text=ex_msg.BTN_SHOW_ANSWER, callback_data="exercise:show_answer")
     builder.button(text=ex_msg.BTN_SKIP_TASK, callback_data="exercise:skip")
     builder.button(text=ex_msg.BTN_END_SESSION, callback_data="exercise:end")
 
-    builder.adjust(2)
+    builder.adjust(2, 1)  # First row: Show Answer + Skip, Second row: Finish
 
     return builder.as_markup()
 

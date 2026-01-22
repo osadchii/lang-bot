@@ -702,3 +702,59 @@ Respond in JSON:
                 feedback="Не удалось получить подробную обратную связь.",
                 correct_answer=task.expected_answer,
             )
+
+    async def get_answer_explanation(
+        self,
+        word: str,
+        translation: str,
+        expected_answer: str,
+        task_hint: str,
+        exercise_type: ExerciseType,
+    ) -> str:
+        """Get grammar explanation for the correct answer.
+
+        Args:
+            word: Original Greek word
+            translation: Russian translation
+            expected_answer: The correct answer
+            task_hint: Grammar hint (tense/case/person)
+            exercise_type: Type of exercise
+
+        Returns:
+            Grammar explanation in Russian
+        """
+        prompt = f"""Explain the grammar rule for this Greek transformation:
+
+Original word: {word} ({translation})
+Transformation: {task_hint}
+Result: {expected_answer}
+Exercise type: {exercise_type.value}
+
+Provide a brief, clear explanation in Russian of why the answer is formed this way.
+Focus on the grammar rule being practiced."""
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a Greek language teacher. "
+                            "Explain grammar rules simply and clearly in Russian. "
+                            "Keep explanations concise (2-3 sentences)."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=200,
+                temperature=0.3,
+            )
+
+            return response.choices[0].message.content or ""
+        except (RateLimitError, APITimeoutError, APIConnectionError, APIError) as e:
+            logger.error(f"Answer explanation generation error: {e}")
+            return ""
+        except Exception as e:
+            logger.exception(f"Unexpected error in answer explanation: {e}")
+            return ""
