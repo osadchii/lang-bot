@@ -563,8 +563,9 @@ async def _show_next_word_or_finish(
     """
     next_index = current_index + 1
     if next_index >= len(words):
-        # Last word added
-        await callback.message.edit_text(
+        # Last word added - delete inline message and send new with reply keyboard
+        await callback.message.delete()
+        await callback.message.answer(
             vocab_msg.get_word_added_final_message(
                 front=added_front,
                 back=words[current_index]["translation"],
@@ -606,7 +607,8 @@ async def _finish_extraction(callback: CallbackQuery, state: FSMContext) -> None
         state: FSM context
     """
     await state.clear()
-    await callback.message.edit_text(
+    await callback.message.delete()
+    await callback.message.answer(
         vocab_msg.MSG_EXTRACTION_FINISHED,
         reply_markup=get_main_menu_keyboard(),
     )
