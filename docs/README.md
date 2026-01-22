@@ -57,8 +57,10 @@ Production deployment and CI/CD setup.
 
 - **AI-Powered Message Handling**: Send any text - the bot categorizes your intent (translation, question, etc.)
 - **Smart Translation**: Translates words, checks existing cards, suggests appropriate decks
+- **Vocabulary Extraction**: Extracts learnable words from translated phrases, filters function words, and offers to add new vocabulary to your decks
 - **Conversation History**: AI remembers context for more natural interactions
 - **Spaced Repetition**: SM-2 algorithm for optimal card scheduling
+- **Grammar Exercises**: Practice verb conjugations, tenses, and noun cases
 
 ## Documentation Maintenance
 
@@ -89,4 +91,4 @@ If you notice outdated or incorrect documentation:
 
 **Note**: This documentation is generated and maintained automatically. For code-specific documentation, see inline comments and docstrings in the source code.
 
-**Last Updated**: 2026-01-21
+**Last Updated**: 2026-01-22

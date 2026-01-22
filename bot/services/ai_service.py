@@ -53,6 +53,54 @@ CATEGORIZATION_USER_PROMPT = """Проанализируй сообщение п
 - "переведи 'я иду домой'" -> {{"category": "text_translation", "confidence": 0.90, "extracted_content": "я иду домой", "source_language": "russian", "topic": null}}
 - "когда использовать о а когда и" -> {{"category": "language_question", "confidence": 0.90, "extracted_content": "когда использовать о а когда и", "source_language": null, "topic": "grammar"}}"""
 
+WORD_EXTRACTION_SYSTEM_PROMPT = """Ты - лингвистический анализатор греческого языка.
+Твоя задача - извлекать из фразы ТОЛЬКО значимые слова (content words) и приводить их к словарной форме.
+
+ПРАВИЛА:
+1. ПРОПУСКАЙ служебные слова:
+   - Артикли: ο, η, το, οι, τα, τον, την, του, της, των, τους, τις, ένας, μια, ένα
+   - Предлоги: σε, από, με, για, προς, κατά, μετά, χωρίς, μέχρι, ως, στον, στην, στο
+   - Союзы: και, ή, αλλά, όμως, γιατί, επειδή, αν, όταν, ενώ, που
+   - Частицы: να, θα, δεν, μη, ας
+   - Местоимения-клитики: με, σε, τον, την, το, μας, σας, τους
+
+2. ИЗВЛЕКАЙ значимые слова:
+   - Существительные
+   - Глаголы
+   - Прилагательные
+   - Наречия
+   - Числительные (кроме один/два как артиклей)
+   - Значимые местоимения (εγώ, εσύ, αυτός, etc.)
+
+3. ПРИВОДИ К СЛОВАРНОЙ ФОРМЕ (lemma):
+   - Существительные: именительный падеж, единственное число
+   - Глаголы: 1 лицо, единственное число, настоящее время
+   - Прилагательные: мужской род, единственное число
+
+4. ДЛЯ СУЩЕСТВИТЕЛЬНЫХ добавляй артикль для указания рода:
+   - ο (мужской), η (женский), το (средний)
+
+5. ВСЕГДА используй СТРОЧНЫЕ буквы в lemma и lemma_with_article.
+
+ФОРМАТ ОТВЕТА (JSON):
+{
+    "words": [
+        {
+            "original": "слово как в тексте",
+            "lemma": "словарная форма (строчные)",
+            "lemma_with_article": "артикль + lemma для существительных (строчные)",
+            "translation": "перевод на русский",
+            "pos": "noun|verb|adjective|adverb|pronoun|numeral"
+        }
+    ]
+}"""
+
+WORD_EXTRACTION_USER_PROMPT = """Извлеки значимые слова из фразы и приведи к словарной форме.
+
+Фраза ({language}): {phrase}
+
+Ответь ТОЛЬКО в формате JSON без дополнительного текста."""
+
 
 class AIService:
     """Service for AI-powered features using OpenAI API."""
@@ -521,3 +569,57 @@ class AIService:
         except (RateLimitError, APITimeoutError, APIConnectionError, APIError) as e:
             logger.error(f"AI categorization API error: {e}")
             raise
+
+    async def extract_and_lemmatize_words(
+        self,
+        phrase: str,
+        source_language: str,
+    ) -> list[dict]:
+        """Extract content words from phrase and return their lemmas.
+
+        Args:
+            phrase: Phrase to extract words from
+            source_language: 'greek' or 'russian'
+
+        Returns:
+            List of word dictionaries with:
+            - original: word as it appears in phrase
+            - lemma: base/dictionary form (lowercase)
+            - lemma_with_article: for nouns, includes article
+            - translation: Russian translation (if Greek) or Greek (if Russian)
+            - pos: part of speech
+        """
+        try:
+            lang_names = {"greek": "греческий", "russian": "русский"}
+            prompt = WORD_EXTRACTION_USER_PROMPT.format(
+                language=lang_names.get(source_language, source_language),
+                phrase=phrase,
+            )
+
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": WORD_EXTRACTION_SYSTEM_PROMPT,
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=1000,
+                temperature=0.3,
+                response_format={"type": "json_object"},
+            )
+
+            content = response.choices[0].message.content or "{}"
+            result = json.loads(content)
+            return result.get("words", [])
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse word extraction response: {e}")
+            return []
+        except (RateLimitError, APITimeoutError, APIConnectionError, APIError) as e:
+            logger.error(f"Word extraction API error: {e}")
+            return []
+        except Exception as e:
+            logger.exception(f"Word extraction failed: {e}")
+            return []

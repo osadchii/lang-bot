@@ -1,6 +1,7 @@
 """Unified message handler with AI-powered categorization."""
 
 import hashlib
+import json
 
 from aiogram import F, Router
 from aiogram.filters import StateFilter
@@ -21,12 +22,15 @@ from bot.database.models.user import User
 from bot.messages import ai as ai_msg
 from bot.messages import common as common_msg
 from bot.messages import translation as trans_msg
+from bot.messages import vocabulary as vocab_msg
 from bot.services.ai_service import AIService
 from bot.services.conversation_service import ConversationService
 from bot.services.message_categorization_service import MessageCategorizationService
 from bot.services.translation_service import TranslationService
+from bot.services.vocabulary_extraction_service import VocabularyExtractionService
 from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
 from bot.telegram.keyboards.translation_keyboards import get_translation_add_keyboard
+from bot.telegram.keyboards.vocabulary_keyboards import get_vocabulary_extraction_keyboard
 
 logger = get_logger(__name__)
 
@@ -105,7 +109,7 @@ async def handle_message(
         if result.category == MessageCategory.WORD_TRANSLATION:
             await _handle_word_translation(message, session, user, state, result)
         elif result.category == MessageCategory.TEXT_TRANSLATION:
-            await _handle_text_translation(message, session, user, result)
+            await _handle_text_translation(message, session, user, state, result)
         elif result.category == MessageCategory.LANGUAGE_QUESTION:
             await _handle_language_question(message, session, user, result)
         else:
@@ -201,14 +205,16 @@ async def _handle_text_translation(
     message: Message,
     session: AsyncSession,
     user: User,
+    state: FSMContext,
     result: CategorizationResult,
 ):
-    """Handle text/sentence translation requests.
+    """Handle text/sentence translation requests with vocabulary extraction.
 
     Args:
         message: User message
         session: Database session
         user: User instance
+        state: FSM context
         result: Categorization result
     """
     if not isinstance(result.intent, TextTranslationIntent):
@@ -239,10 +245,55 @@ async def _handle_text_translation(
         message_type="translate",
     )
 
-    await message.answer(
-        ai_msg.get_translation_result(translation),
-        reply_markup=get_main_menu_keyboard(),
+    # Extract vocabulary from the phrase
+    vocab_service = VocabularyExtractionService(session)
+    extraction = await vocab_service.extract_vocabulary(
+        user=user,
+        phrase=intent.text,
+        phrase_translation=translation,
+        source_language=intent.source_language,
     )
+
+    if extraction.new_words:
+        # Store extraction data in FSM state
+        extraction_hash = _hash_word(intent.text)
+        words_data = [
+            {
+                "original_form": w.original_form,
+                "lemma": w.lemma,
+                "lemma_with_article": w.lemma_with_article,
+                "translation": w.translation,
+                "part_of_speech": w.part_of_speech,
+                "already_in_cards": w.already_in_cards,
+            }
+            for w in extraction.new_words
+        ]
+        await state.update_data(
+            extraction_hash=extraction_hash,
+            extraction_words=json.dumps(words_data, ensure_ascii=False),
+            source_language=intent.source_language,
+        )
+
+        # Show translation with "Learn words" button
+        await message.answer(
+            vocab_msg.get_translation_with_vocabulary(
+                translation=translation,
+                new_words_count=len(extraction.new_words),
+            ),
+            reply_markup=get_vocabulary_extraction_keyboard(extraction_hash),
+        )
+    elif extraction.existing_words:
+        # All words already in cards
+        await message.answer(
+            f"{ai_msg.get_translation_result(translation)}\n\n{vocab_msg.MSG_NO_NEW_WORDS}",
+            reply_markup=get_main_menu_keyboard(),
+        )
+    else:
+        # No words extracted - show simple translation
+        await message.answer(
+            ai_msg.get_translation_result(translation),
+            reply_markup=get_main_menu_keyboard(),
+        )
 
 
 async def _handle_language_question(

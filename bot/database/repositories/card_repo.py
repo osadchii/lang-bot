@@ -309,3 +309,47 @@ class CardRepository(BaseRepository[Card]):
         )
         result = await self.session.execute(query)
         return result.scalar_one()
+
+    async def find_cards_by_lemmas(
+        self,
+        user_id: int,
+        lemmas: list[str],
+        limit: int = 100,
+    ) -> list[tuple[Card, int]]:
+        """Find cards matching any of the provided lemmas.
+
+        Searches both front and back fields. Useful for bulk vocabulary check.
+
+        Args:
+            user_id: User ID
+            lemmas: List of lemmas to search for
+            limit: Maximum results
+
+        Returns:
+            List of (Card, deck_id) tuples for matching cards
+        """
+        from sqlalchemy import or_
+
+        from bot.database.models.deck import Deck
+
+        if not lemmas:
+            return []
+
+        # Build OR conditions for all lemmas (exact match, case-insensitive)
+        conditions = []
+        for lemma in lemmas:
+            lemma_lower = lemma.lower()
+            conditions.append(func.lower(Card.front) == lemma_lower)
+            conditions.append(func.lower(Card.back) == lemma_lower)
+
+        query = (
+            select(Card, Deck.id)
+            .join(Deck, Card.deck_id == Deck.id)
+            .where(
+                Deck.user_id == user_id,
+                or_(*conditions),
+            )
+            .limit(limit)
+        )
+        result = await self.session.execute(query)
+        return list(result.tuples().all())

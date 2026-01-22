@@ -68,6 +68,7 @@ def setup_handlers(dp: Dispatcher) -> None:
         statistics,
         translation,
         unified_message,
+        vocabulary_extraction,
     )
 
     # Register routers
@@ -77,6 +78,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     dp.include_router(learning.router)
     dp.include_router(exercises.router)  # Grammar exercises
     dp.include_router(translation.router)  # Callbacks only
+    dp.include_router(vocabulary_extraction.router)  # Vocabulary extraction callbacks
     dp.include_router(ai_chat.router)  # Commands only (/translate, /grammar, /clear_history)
     dp.include_router(unified_message.router)  # AI-powered message categorization
     dp.include_router(statistics.router)

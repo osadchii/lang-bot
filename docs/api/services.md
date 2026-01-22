@@ -393,6 +393,41 @@ result = await ai_service.categorize_message("как переводится σπ
 # }
 ```
 
+#### `extract_and_lemmatize_words(phrase: str, source_language: str) -> list[dict]`
+
+Extract content words from a phrase and return their lemmatized (base/dictionary) forms. Filters out function words (articles, prepositions, conjunctions, particles).
+
+**Parameters**:
+- `phrase` (str): Phrase to extract words from
+- `source_language` (str): 'greek' or 'russian'
+
+**Returns**: List of word dictionaries with:
+- `original`: Word as it appears in the phrase
+- `lemma`: Base/dictionary form (lowercase)
+- `lemma_with_article`: For nouns, includes Greek article (lowercase)
+- `translation`: Russian translation (if Greek) or Greek (if Russian)
+- `pos`: Part of speech (noun, verb, adjective, adverb, pronoun, numeral)
+
+**Filtered Words** (not extracted):
+- Articles: o, h, to, oi, ta, ton, thn, etc.
+- Prepositions: se, apo, me, gia, pros, etc.
+- Conjunctions: kai, h, alla, omws, giati, etc.
+- Particles: na, tha, den, mh, as
+- Clitic pronouns: me, se, ton, thn, to, mas, sas, tous
+
+**Example**:
+```python
+words = await ai_service.extract_and_lemmatize_words(
+    phrase="Το σπίτι είναι μεγάλο",
+    source_language="greek"
+)
+# Returns: [
+#     {"original": "σπίτι", "lemma": "σπιτι", "lemma_with_article": "το σπιτι", "translation": "дом", "pos": "noun"},
+#     {"original": "είναι", "lemma": "ειμαι", "lemma_with_article": "ειμαι", "translation": "быть", "pos": "verb"},
+#     {"original": "μεγάλο", "lemma": "μεγαλος", "lemma_with_article": "μεγαλος", "translation": "большой", "pos": "adjective"}
+# ]
+```
+
 ---
 
 ## ConversationService
@@ -766,6 +801,112 @@ explanation = await exercise_service.get_answer_explanation(
 )
 # Returns: "Глагол γραφω в аористе образует форму εγραψα..."
 ```
+
+---
+
+## VocabularyExtractionService
+
+**File**: `bot/services/vocabulary_extraction_service.py`
+
+Extracts learnable vocabulary from translated phrases. When a user translates a phrase, this service identifies content words, lemmatizes them, and checks which words the user already knows.
+
+### Data Classes
+
+#### `ExtractedWord`
+
+A word extracted from a phrase, ready for card creation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `original_form` | str | Form as it appeared in the phrase |
+| `lemma` | str | Base/dictionary form (lowercase) |
+| `lemma_with_article` | str | For nouns: "o/h/to lemma" (lowercase) |
+| `translation` | str | Russian translation |
+| `part_of_speech` | str | noun, verb, adjective, adverb, etc. |
+| `already_in_cards` | bool | True if user already has this word |
+
+#### `VocabularyExtractionResult`
+
+Result of vocabulary extraction from a phrase.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `phrase` | str | Original phrase |
+| `phrase_translation` | str | Translation of full phrase |
+| `source_language` | str | 'greek' or 'russian' |
+| `extracted_words` | list[ExtractedWord] | All extracted content words |
+| `new_words` | list[ExtractedWord] | Words not in user's cards |
+| `existing_words` | list[ExtractedWord] | Words already in cards |
+
+### Methods
+
+#### `extract_vocabulary(user: User, phrase: str, phrase_translation: str, source_language: str) -> VocabularyExtractionResult`
+
+Extract learnable vocabulary from a translated phrase. Automatically filters out function words (articles, prepositions, conjunctions) and checks against user's existing cards.
+
+**Parameters**:
+- `user` (User): User instance
+- `phrase` (str): Original phrase
+- `phrase_translation` (str): Translation of the phrase
+- `source_language` (str): 'greek' or 'russian'
+
+**Returns**: VocabularyExtractionResult with all extracted and categorized words
+
+**Process**:
+1. Uses AI to extract content words and lemmatize them
+2. Collects all lemmas (with and without articles)
+3. Bulk searches user's cards for existing words
+4. Separates words into new and existing lists
+
+**Example**:
+```python
+from bot.services.vocabulary_extraction_service import VocabularyExtractionService
+
+vocab_service = VocabularyExtractionService(session)
+result = await vocab_service.extract_vocabulary(
+    user=user,
+    phrase="Το σπίτι είναι πολύ μεγάλο",
+    phrase_translation="Дом очень большой",
+    source_language="greek"
+)
+
+print(f"Found {len(result.extracted_words)} words")
+print(f"New words: {len(result.new_words)}")
+print(f"Already known: {len(result.existing_words)}")
+
+for word in result.new_words:
+    print(f"  {word.lemma_with_article} ({word.part_of_speech}) - {word.translation}")
+# Output:
+#   το σπιτι (noun) - дом
+#   μεγαλος (adjective) - большой
+```
+
+### Integration with Translation Flow
+
+The vocabulary extraction feature integrates with phrase translation:
+
+1. User sends a phrase for translation
+2. Bot translates the phrase
+3. `VocabularyExtractionService.extract_vocabulary()` is called
+4. If new words are found, user sees "Extract vocabulary" button
+5. User can add words one by one to their decks
+
+### Handler Flow
+
+The vocabulary extraction handler (`bot/telegram/handlers/vocabulary_extraction.py`) manages the FSM flow:
+
+1. **VocabularyExtraction.selecting_words**: User browses extracted words
+2. **VocabularyExtraction.selecting_deck**: User chooses deck for current word
+3. Word is added via `CardService.create_card()`
+4. Flow continues to next word or finishes
+
+**Callback Patterns**:
+- `vocab_show:{hash}` - Show extracted words list
+- `vocab_add:{index}` - Select word for adding
+- `vocab_skip:{index}` - Skip current word
+- `vocab_back:{index}` - Go back from deck selection
+- `vocab_deck:{deck_id}:{word_index}` - Add word to deck
+- `vocab_finish` - Finish extraction flow
 
 ---
 

@@ -72,11 +72,12 @@ Services implement core business logic and coordinate between repositories:
 - `CardService`: Card management
 - `LearningService`: Learning sessions, SRS algorithm
 - `StatisticsService`: Analytics and reporting
-- `AIService`: OpenAI API integration (translations, grammar, card generation, message categorization)
+- `AIService`: OpenAI API integration (translations, grammar, card generation, message categorization, word extraction)
 - `ConversationService`: AI conversation history management
 - `TranslationService`: Smart translation with card lookup and deck suggestions
 - `MessageCategorizationService`: AI-powered message intent detection
 - `ExerciseService`: Grammar exercises (tenses, conjugations, cases) with AI task generation
+- `VocabularyExtractionService`: Extract learnable vocabulary from translated phrases
 
 **Pattern**: Each service receives `AsyncSession` in `__init__` and creates repositories.
 
@@ -453,5 +454,5 @@ Extend `AIService` in `bot/services/ai_service.py`:
 
 ---
 
-**Last Updated**: 2026-01-21
+**Last Updated**: 2026-01-22
 **Maintained by**: Documentation Agent
