@@ -670,25 +670,54 @@ words = await exercise_service.get_user_words_for_exercise(
 # Returns: [{"word": "γραφω", "translation": "писать"}, ...]
 ```
 
-#### `generate_task(exercise_type: ExerciseType, user_words: list[dict] | None = None) -> ExerciseTask`
+#### `get_words_with_ai_supplement(user_id: int, exercise_type: ExerciseType) -> tuple[list[dict], list[dict]]`
 
-Generate an exercise task. Uses user's words first, falls back to AI generation.
+Get words for exercises, supplementing with AI-generated words if user has fewer than `MIN_WORDS_FOR_VARIETY` (3) words.
+
+**Parameters**:
+- `user_id` (int): User ID
+- `exercise_type` (ExerciseType): Type of exercise
+
+**Returns**: Tuple of (all_words, ai_generated_words)
+
+**Example**:
+```python
+all_words, ai_words = await exercise_service.get_words_with_ai_supplement(
+    user_id=1,
+    exercise_type=ExerciseType.TENSES
+)
+# all_words includes both user's cards and AI-generated supplements
+# ai_words contains only the AI-generated words (for offering to save later)
+```
+
+#### `generate_task(exercise_type: ExerciseType, user_words: list[dict] | None = None, history: list[tuple[str, str]] | None = None) -> tuple[ExerciseTask, list[tuple[str, str]]]`
+
+Generate an exercise task with history-aware selection. Uses user's words first, falls back to AI generation. Avoids recently used word+variation combinations to ensure variety.
 
 **Parameters**:
 - `exercise_type` (ExerciseType): Type of exercise
 - `user_words` (list[dict], optional): List of user's words
+- `history` (list[tuple[str, str]], optional): Recent (word, variation_key) combinations to avoid
 
-**Returns**: ExerciseTask with task details
+**Returns**: Tuple of (ExerciseTask, updated_history)
+
+**Key Behavior**:
+- Source forms are excluded from target options (present tense, 1st singular, nominative)
+- Recent word+variation combinations are avoided when history is provided
+- History is limited to `MAX_EXERCISE_HISTORY` (10) recent combinations
 
 **Example**:
 ```python
-task = await exercise_service.generate_task(
+history = []
+task, history = await exercise_service.generate_task(
     exercise_type=ExerciseType.CONJUGATIONS,
-    user_words=[{"word": "γραφω", "translation": "писать"}]
+    user_words=[{"word": "γραφω", "translation": "писать"}],
+    history=history
 )
 # task.word = "γραφω"
-# task.task_text = "Спрягай для 2-е лицо ед.ч. (εσυ)"
+# task.task_text = "Спрягай для 2-е лицо ед.ч. (εσυ)"  # Never 1st singular!
 # task.expected_answer = "γραφεις"
+# history = [("γραφω", "2nd_singular")]
 ```
 
 #### `verify_answer(task: ExerciseTask, user_answer: str, exercise_type: ExerciseType) -> AnswerResult`

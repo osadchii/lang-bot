@@ -82,9 +82,9 @@ async def start_exercise_session(
         ExerciseType.CASES: ex_msg.MSG_SESSION_STARTED_CASES,
     }
 
-    # Get user's words for this exercise type
+    # Get user's words with AI supplementation if needed
     exercise_service = ExerciseService(session)
-    user_words = await exercise_service.get_user_words_for_exercise(
+    all_words, session_ai_words = await exercise_service.get_words_with_ai_supplement(
         user_id=user.id,
         exercise_type=exercise_type,
     )
@@ -94,9 +94,10 @@ async def start_exercise_session(
         exercise_type=exercise_type_str,
         total_count=0,
         correct_count=0,
-        ai_words=[],  # Will store AI-generated words for later adding
-        user_words=user_words,  # Cache user's words
+        ai_words=session_ai_words,  # Start with AI-generated supplements
+        user_words=all_words,  # Cache all words (user + AI supplements)
         current_task=None,
+        exercise_history=[],  # Track recent (word, variation) combinations
     )
 
     await callback.message.edit_text(start_messages[exercise_type])
@@ -123,16 +124,18 @@ async def generate_and_show_task(
     user_words = data.get("user_words", [])
     total_count = data.get("total_count", 0)
     correct_count = data.get("correct_count", 0)
+    history = data.get("exercise_history", [])
 
     exercise_service = ExerciseService(session)
 
-    # Generate task
-    task = await exercise_service.generate_task(
+    # Generate task with history tracking
+    task, new_history = await exercise_service.generate_task(
         exercise_type=exercise_type,
         user_words=user_words if user_words else None,
+        history=history,
     )
 
-    # Store current task in state
+    # Store current task and updated history in state
     await state.update_data(
         current_task={
             "word": task.word,
@@ -141,7 +144,8 @@ async def generate_and_show_task(
             "task_hint": task.task_hint,
             "expected_answer": task.expected_answer,
             "is_from_ai": task.is_from_ai,
-        }
+        },
+        exercise_history=new_history,
     )
 
     # Set state to wait for answer

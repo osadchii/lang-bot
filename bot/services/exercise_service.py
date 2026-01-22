@@ -15,6 +15,15 @@ from bot.database.repositories.deck_repo import DeckRepository
 
 logger = get_logger(__name__)
 
+# Maximum number of recent (word, variation) combinations to track for variety
+MAX_EXERCISE_HISTORY = 10
+
+# Minimum number of words needed for good exercise variety
+MIN_WORDS_FOR_VARIETY = 3
+
+# Number of AI words to generate when below threshold
+AI_SUPPLEMENT_COUNT = 2
+
 
 class ExerciseType(str, Enum):
     """Types of grammar exercises."""
@@ -139,40 +148,163 @@ class ExerciseService:
         word_stripped = word.strip()
         return any(word_stripped.endswith(ending) for ending in verb_endings)
 
+    def _get_variations_for_type(self, exercise_type: ExerciseType) -> list[tuple]:
+        """Get available variations for exercise type, excluding source forms.
+
+        Args:
+            exercise_type: Type of exercise
+
+        Returns:
+            List of variation tuples
+        """
+        if exercise_type == ExerciseType.TENSES:
+            # Exclude present tense (source form)
+            return [
+                ("Αοριστος", "прошедшее время (аорист)"),
+                ("Μελλοντας", "будущее время"),
+            ]
+        elif exercise_type == ExerciseType.CONJUGATIONS:
+            # Exclude 1st person singular (source form)
+            return [
+                ("2nd_singular", "εσυ", "2-е лицо ед.ч. (εσυ)"),
+                ("3rd_singular", "αυτος", "3-е лицо ед.ч. (αυτος/η/ο)"),
+                ("1st_plural", "εμεις", "1-е лицо мн.ч. (εμεις)"),
+                ("2nd_plural", "εσεις", "2-е лицо мн.ч. (εσεις)"),
+                ("3rd_plural", "αυτοι", "3-е лицо мн.ч. (αυτοι/ες/α)"),
+            ]
+        else:  # CASES
+            # Exclude nominative case (source form)
+            return [
+                ("Γενικη", "родительный падеж (Γενικη)"),
+                ("Αιτιατικη", "винительный падеж (Αιτιατικη)"),
+                ("Κλητικη", "звательный падеж (Κλητικη)"),
+            ]
+
+    def _select_word_and_variation(
+        self,
+        words: list[dict],
+        variations: list[tuple],
+        history: list[tuple[str, str]],
+    ) -> tuple[dict, tuple, list[tuple[str, str]]]:
+        """Select word and variation avoiding recent combinations.
+
+        Args:
+            words: Available words (dicts with 'word' and 'translation')
+            variations: Available variations (tuples with key as first element)
+            history: List of (word, variation_key) tuples
+
+        Returns:
+            (selected_word, selected_variation, updated_history)
+        """
+        recent_set = set(history[-MAX_EXERCISE_HISTORY:])
+
+        # Build available combinations not in recent history
+        available = []
+        for word in words:
+            word_key = word["word"]
+            for variation in variations:
+                variation_key = variation[0]
+                if (word_key, variation_key) not in recent_set:
+                    available.append((word, variation))
+
+        # Fallback if all combinations are in history
+        if not available:
+            available = [(word, var) for word in words for var in variations]
+
+        selected_word, selected_variation = random.choice(available)
+
+        # Update history
+        new_history = history + [(selected_word["word"], selected_variation[0])]
+        if len(new_history) > MAX_EXERCISE_HISTORY:
+            new_history = new_history[-MAX_EXERCISE_HISTORY:]
+
+        return selected_word, selected_variation, new_history
+
+    async def get_words_with_ai_supplement(
+        self,
+        user_id: int,
+        exercise_type: ExerciseType,
+    ) -> tuple[list[dict], list[dict]]:
+        """Get words for exercises, supplementing with AI if needed.
+
+        Args:
+            user_id: User ID
+            exercise_type: Type of exercise
+
+        Returns:
+            (all_words, ai_generated_words)
+        """
+        user_words = await self.get_user_words_for_exercise(
+            user_id=user_id,
+            exercise_type=exercise_type,
+        )
+
+        ai_words: list[dict] = []
+        existing_word_texts = {w["word"] for w in user_words}
+
+        if len(user_words) < MIN_WORDS_FOR_VARIETY:
+            needed = min(AI_SUPPLEMENT_COUNT, MIN_WORDS_FOR_VARIETY - len(user_words))
+            attempts = 0
+            max_attempts = needed * 2  # Allow retries for duplicates
+
+            while len(ai_words) < needed and attempts < max_attempts:
+                attempts += 1
+                ai_word = await self._generate_word_with_ai(exercise_type)
+                if ai_word["word"] not in existing_word_texts:
+                    ai_words.append(ai_word)
+                    existing_word_texts.add(ai_word["word"])
+
+        return user_words + ai_words, ai_words
+
     async def generate_task(
         self,
         exercise_type: ExerciseType,
         user_words: list[dict] | None = None,
-    ) -> ExerciseTask:
-        """Generate an exercise task.
+        history: list[tuple[str, str]] | None = None,
+    ) -> tuple[ExerciseTask, list[tuple[str, str]]]:
+        """Generate an exercise task with history tracking.
 
-        First tries to use user's words, falls back to AI generation.
+        First tries to use user's words with history-aware selection,
+        falls back to AI generation.
 
         Args:
             exercise_type: Type of exercise
             user_words: Optional list of user's words
+            history: Optional list of recent (word, variation) combinations
 
         Returns:
-            ExerciseTask with task details
+            Tuple of (ExerciseTask, updated_history)
         """
-        # Try to use user's word first
+        history = history or []
+        variations = self._get_variations_for_type(exercise_type)
+
+        # Try to use user's word first with history-aware selection
         if user_words:
-            word_data = random.choice(user_words)
+            word_data, selected_variation, new_history = self._select_word_and_variation(
+                words=user_words,
+                variations=variations,
+                history=history,
+            )
             is_from_ai = False
         else:
             # Generate word with AI
             word_data = await self._generate_word_with_ai(exercise_type)
+            selected_variation = random.choice(variations)
+            new_history = history + [(word_data["word"], selected_variation[0])]
+            if len(new_history) > MAX_EXERCISE_HISTORY:
+                new_history = new_history[-MAX_EXERCISE_HISTORY:]
             is_from_ai = True
 
-        # Generate the specific task based on type
-        task = await self._generate_task_details(
+        # Generate the specific task based on type with pre-selected variation
+        task = await self._generate_task_with_variation(
             exercise_type=exercise_type,
             word=word_data["word"],
             translation=word_data["translation"],
             is_from_ai=is_from_ai,
+            variation=selected_variation,
         )
 
-        return task
+        return task, new_history
 
     async def _generate_word_with_ai(
         self,
@@ -243,36 +375,45 @@ Respond in JSON format:
                 return {"word": "ο ανθρωπος", "translation": "человек"}
             return {"word": "γραφω", "translation": "писать"}
 
-    async def _generate_task_details(
+    async def _generate_task_with_variation(
         self,
         exercise_type: ExerciseType,
         word: str,
         translation: str,
         is_from_ai: bool,
+        variation: tuple,
     ) -> ExerciseTask:
-        """Generate task details including the expected answer.
+        """Generate task details with a pre-selected variation.
 
         Args:
             exercise_type: Type of exercise
             word: Greek word
             translation: Russian translation
             is_from_ai: Whether word is AI-generated
+            variation: Pre-selected variation tuple
 
         Returns:
             Complete ExerciseTask
         """
         if exercise_type == ExerciseType.TENSES:
-            return await self._generate_tense_task(word, translation, is_from_ai)
+            return await self._generate_tense_task(
+                word, translation, is_from_ai, selected_tense=variation
+            )
         elif exercise_type == ExerciseType.CONJUGATIONS:
-            return await self._generate_conjugation_task(word, translation, is_from_ai)
+            return await self._generate_conjugation_task(
+                word, translation, is_from_ai, selected_person=variation
+            )
         else:  # CASES
-            return await self._generate_case_task(word, translation, is_from_ai)
+            return await self._generate_case_task(
+                word, translation, is_from_ai, selected_case=variation
+            )
 
     async def _generate_tense_task(
         self,
         word: str,
         translation: str,
         is_from_ai: bool,
+        selected_tense: tuple[str, str] | None = None,
     ) -> ExerciseTask:
         """Generate a tense exercise task.
 
@@ -280,16 +421,21 @@ Respond in JSON format:
             word: Greek verb
             translation: Russian translation
             is_from_ai: Whether word is AI-generated
+            selected_tense: Pre-selected tense tuple (greek, russian) or None for random
 
         Returns:
             ExerciseTask for tense practice
         """
-        tenses = [
-            ("Ενεστωτας", "настоящее время"),
-            ("Αοριστος", "прошедшее время (аорист)"),
-            ("Μελλοντας", "будущее время"),
-        ]
-        tense_greek, tense_russian = random.choice(tenses)
+        if selected_tense:
+            tense_greek, tense_russian = selected_tense
+        else:
+            # Cards store verbs in present tense (Ενεστωτας), so exclude it
+            # to avoid question = answer
+            tenses = [
+                ("Αοριστος", "прошедшее время (аорист)"),
+                ("Μελλοντας", "будущее время"),
+            ]
+            tense_greek, tense_russian = random.choice(tenses)
 
         prompt = f"""For the Greek verb "{word}" ({translation}), provide the correct form in {tense_greek} (1st person singular).
 
@@ -337,6 +483,7 @@ Respond in JSON:
         word: str,
         translation: str,
         is_from_ai: bool,
+        selected_person: tuple[str, str, str] | None = None,
     ) -> ExerciseTask:
         """Generate a conjugation exercise task.
 
@@ -344,19 +491,24 @@ Respond in JSON:
             word: Greek verb
             translation: Russian translation
             is_from_ai: Whether word is AI-generated
+            selected_person: Pre-selected person tuple (id, pronoun, russian) or None for random
 
         Returns:
             ExerciseTask for conjugation practice
         """
-        persons = [
-            ("1st_singular", "εγω", "1-е лицо ед.ч. (εγω)"),
-            ("2nd_singular", "εσυ", "2-е лицо ед.ч. (εσυ)"),
-            ("3rd_singular", "αυτος", "3-е лицо ед.ч. (αυτος/η/ο)"),
-            ("1st_plural", "εμεις", "1-е лицо мн.ч. (εμεις)"),
-            ("2nd_plural", "εσεις", "2-е лицо мн.ч. (εσεις)"),
-            ("3rd_plural", "αυτοι", "3-е лицо мн.ч. (αυτοι/ες/α)"),
-        ]
-        person_id, pronoun, person_russian = random.choice(persons)
+        if selected_person:
+            person_id, pronoun, person_russian = selected_person
+        else:
+            # Cards store verbs in 1st person singular, so exclude it
+            # to avoid question = answer
+            persons = [
+                ("2nd_singular", "εσυ", "2-е лицо ед.ч. (εσυ)"),
+                ("3rd_singular", "αυτος", "3-е лицо ед.ч. (αυτος/η/ο)"),
+                ("1st_plural", "εμεις", "1-е лицо мн.ч. (εμεις)"),
+                ("2nd_plural", "εσεις", "2-е лицо мн.ч. (εσεις)"),
+                ("3rd_plural", "αυτοι", "3-е лицо мн.ч. (αυτοι/ες/α)"),
+            ]
+            person_id, pronoun, person_russian = random.choice(persons)
 
         prompt = f"""For the Greek verb "{word}" ({translation}), provide the correct form for {person_id} ({pronoun}) in present tense.
 
@@ -404,6 +556,7 @@ Respond in JSON:
         word: str,
         translation: str,
         is_from_ai: bool,
+        selected_case: tuple[str, str] | None = None,
     ) -> ExerciseTask:
         """Generate a case exercise task.
 
@@ -411,17 +564,22 @@ Respond in JSON:
             word: Greek noun with article
             translation: Russian translation
             is_from_ai: Whether word is AI-generated
+            selected_case: Pre-selected case tuple (greek, russian) or None for random
 
         Returns:
             ExerciseTask for case practice
         """
-        cases = [
-            ("Ονομαστικη", "именительный падеж (Ονομαστικη)"),
-            ("Γενικη", "родительный падеж (Γενικη)"),
-            ("Αιτιατικη", "винительный падеж (Αιτιατικη)"),
-            ("Κλητικη", "звательный падеж (Κλητικη)"),
-        ]
-        case_greek, case_russian = random.choice(cases)
+        if selected_case:
+            case_greek, case_russian = selected_case
+        else:
+            # Cards store nouns in nominative case (Ονομαστικη), so exclude it
+            # to avoid question = answer
+            cases = [
+                ("Γενικη", "родительный падеж (Γενικη)"),
+                ("Αιτιατικη", "винительный падеж (Αιτιατικη)"),
+                ("Κλητικη", "звательный падеж (Κλητικη)"),
+            ]
+            case_greek, case_russian = random.choice(cases)
 
         prompt = f"""For the Greek noun "{word}" ({translation}), provide the correct form in {case_greek} (singular, with article if applicable).
 

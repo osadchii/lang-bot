@@ -1,7 +1,15 @@
 """Pytest configuration and fixtures."""
 
+import os
+
+# Set test environment variables BEFORE importing any bot modules
+os.environ.setdefault("TELEGRAM_BOT_TOKEN", "test_token_123")
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("OPENAI_API_KEY", "test_openai_key_123")
+os.environ.setdefault("DEBUG", "True")
+
 import asyncio
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
