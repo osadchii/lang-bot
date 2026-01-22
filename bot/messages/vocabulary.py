@@ -8,6 +8,7 @@ BTN_ADD_WORD = "Добавить в карточки"
 BTN_SKIP_WORD = "Пропустить"
 BTN_FINISH = "Закончить"
 BTN_BACK = "Назад"
+BTN_CREATE_NEW_DECK = "Создать новую колоду"
 
 # Messages
 MSG_TRANSLATION_WITH_VOCAB = (
@@ -44,6 +45,28 @@ MSG_NO_NEW_WORDS = "Все слова из этой фразы уже есть �
 MSG_DATA_EXPIRED = "Данные устарели. Переведи фразу снова."
 
 MSG_ERROR = "Произошла ошибка. Попробуй снова."
+
+MSG_CARD_CREATE_ERROR = "Не удалось создать карточку. Попробуй позже."
+
+MSG_DECK_NOT_FOUND = "Колода не найдена."
+
+DEFAULT_DECK_NAME = "Разное"
+
+MAX_DECK_NAME_LENGTH = 100
+
+MSG_ENTER_DECK_NAME = "Введи название для новой колоды:"
+
+MSG_DECK_NAME_EMPTY = "Название колоды не может быть пустым."
+
+MSG_DECK_NAME_TOO_LONG = "Название колоды слишком длинное. Максимум 100 символов."
+
+MSG_NO_DECKS = "<b>У тебя пока нет колод</b>\n\nСоздай новую колоду для слова:"
+
+MSG_DECK_CREATED = (
+    "<b>Колода создана и карточка добавлена!</b>\n\n"
+    "Колода: {deck_name}\n"
+    "<b>{front}</b> - {back}"
+)
 
 # Part of speech names
 POS_NAMES = {
@@ -169,4 +192,22 @@ def get_word_added_continue_message(
         lemma=html.escape(next_lemma),
         translation=html.escape(next_translation),
         original=html.escape(next_original),
+    )
+
+
+def get_deck_created_message(front: str, back: str, deck_name: str) -> str:
+    """Get message for deck created and card added.
+
+    Args:
+        front: Card front (Greek)
+        back: Card back (Russian)
+        deck_name: New deck name
+
+    Returns:
+        Formatted message
+    """
+    return MSG_DECK_CREATED.format(
+        front=html.escape(front),
+        back=html.escape(back),
+        deck_name=html.escape(deck_name),
     )

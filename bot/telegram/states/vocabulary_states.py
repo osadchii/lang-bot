@@ -8,3 +8,4 @@ class VocabularyExtraction(StatesGroup):
 
     selecting_words = State()  # User browsing extracted words
     selecting_deck = State()  # User selecting deck for a word
+    waiting_for_deck_name = State()  # User entering custom deck name
