@@ -35,6 +35,17 @@ MSG_DECK_CREATED_AND_CARD_ADDED = (
     "<b>{front}</b> - {back}"
 )
 
+# Sentence feedback messages
+MSG_SENTENCE_CORRECT = "<b>Правильно!</b>\n\n<b>Перевод:</b>\n{translation}"
+
+MSG_SENTENCE_WITH_ERRORS = (
+    "<b>Ошибка:</b> {error_description}\n\n"
+    "<b>Исправленный вариант:</b>\n{corrected_sentence}\n\n"
+    "<b>Перевод:</b>\n{translation}"
+)
+
+MSG_SENTENCE_TRANSLATION_ONLY = "<b>Перевод:</b>\n\n{translation}"
+
 # Error messages
 MSG_TRANSLATION_ERROR = "Не удалось получить перевод. Попробуй позже."
 MSG_CARD_CREATE_ERROR = "Не удалось создать карточку. Попробуй позже."
@@ -122,3 +133,34 @@ def get_deck_created_message(front: str, back: str, deck_name: str) -> str:
         back=html.escape(back),
         deck_name=html.escape(deck_name),
     )
+
+
+def get_sentence_feedback_message(
+    is_correct: bool,
+    translation: str,
+    error_description: str | None = None,
+    corrected_sentence: str | None = None,
+) -> str:
+    """Get formatted sentence feedback message.
+
+    Args:
+        is_correct: Whether sentence is grammatically correct
+        translation: Translation of the sentence
+        error_description: Brief description of the error (if any)
+        corrected_sentence: Corrected version (if any)
+
+    Returns:
+        Formatted feedback message
+    """
+    if is_correct:
+        return MSG_SENTENCE_CORRECT.format(translation=html.escape(translation))
+
+    if error_description and corrected_sentence:
+        return MSG_SENTENCE_WITH_ERRORS.format(
+            error_description=html.escape(error_description),
+            corrected_sentence=html.escape(corrected_sentence),
+            translation=html.escape(translation),
+        )
+
+    # Fallback if analysis data is missing
+    return MSG_SENTENCE_TRANSLATION_ONLY.format(translation=html.escape(translation))

@@ -101,6 +101,41 @@ WORD_EXTRACTION_USER_PROMPT = """Извлеки значимые слова из
 
 Ответь ТОЛЬКО в формате JSON без дополнительного текста."""
 
+# Prompts for sentence analysis and feedback
+SENTENCE_ANALYSIS_SYSTEM_PROMPT = """Ты - эксперт по греческому и русскому языкам.
+Твоя задача - проанализировать предложение на наличие ошибок и дать перевод.
+
+ПРОВЕРЯЙ:
+1. Грамматические ошибки (падежи, согласование, порядок слов, артикли)
+2. Орфографические ошибки
+3. Неправильное использование слов или выражений
+4. Стилистические ошибки (если явные)
+
+ВАЖНО:
+- Будь СТРОГИМ, но СПРАВЕДЛИВЫМ
+- Если предложение правильное - отметь is_correct: true
+- Если есть ошибки - опиши их КРАТКО (1-2 предложения на русском)
+- Всегда давай перевод на целевой язык
+- Для греческих существительных указывай артикль
+
+Отвечай СТРОГО в формате JSON."""
+
+SENTENCE_ANALYSIS_USER_PROMPT = """Проанализируй предложение на {source_lang} и переведи на {target_lang}.
+
+Предложение: {sentence}
+
+Ответь в формате JSON:
+{{
+    "is_correct": true/false,
+    "error_description": "краткое описание ошибки на русском" | null,
+    "corrected_sentence": "исправленное предложение" | null,
+    "translation": "перевод на {target_lang}"
+}}
+
+Примеры:
+- Правильное: {{"is_correct": true, "error_description": null, "corrected_sentence": null, "translation": "перевод"}}
+- С ошибкой: {{"is_correct": false, "error_description": "Ошибка в согласовании прилагательного.", "corrected_sentence": "исправленный вариант", "translation": "перевод исправленного"}}"""
+
 
 class AIService:
     """Service for AI-powered features using OpenAI API."""
@@ -232,6 +267,97 @@ class AIService:
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
             return ai_messages.MSG_AI_UNEXPECTED_ERROR
+
+    async def analyze_and_translate_sentence(
+        self,
+        sentence: str,
+        source_language: str,
+    ) -> dict:
+        """Analyze sentence for errors and provide translation with feedback.
+
+        Args:
+            sentence: Sentence to analyze
+            source_language: 'greek' or 'russian'
+
+        Returns:
+            Dictionary with:
+            - is_correct: bool
+            - error_description: str | None
+            - corrected_sentence: str | None
+            - translation: str
+        """
+        target_language = "russian" if source_language == "greek" else "greek"
+        lang_names = {
+            "greek": "греческом",
+            "russian": "русском",
+        }
+        target_lang_names = {
+            "greek": "греческий",
+            "russian": "русский",
+        }
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": SENTENCE_ANALYSIS_SYSTEM_PROMPT,
+                    },
+                    {
+                        "role": "user",
+                        "content": SENTENCE_ANALYSIS_USER_PROMPT.format(
+                            source_lang=lang_names.get(source_language, source_language),
+                            target_lang=target_lang_names.get(target_language, target_language),
+                            sentence=sentence,
+                        ),
+                    },
+                ],
+                max_tokens=500,
+                temperature=0.3,
+                response_format={"type": "json_object"},
+            )
+
+            content = response.choices[0].message.content or "{}"
+            result = json.loads(content)
+
+            return {
+                "is_correct": result.get("is_correct", True),
+                "error_description": result.get("error_description"),
+                "corrected_sentence": result.get("corrected_sentence"),
+                "translation": result.get("translation", ""),
+            }
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse sentence analysis response: {e}")
+            # Fall back to simple translation
+            translation = await self.translate_word(sentence, source_language, target_language)
+            return {
+                "is_correct": True,
+                "error_description": None,
+                "corrected_sentence": None,
+                "translation": translation,
+            }
+        except (RateLimitError, APITimeoutError, APIConnectionError, APIError) as e:
+            logger.error(f"Sentence analysis API error: {e}")
+            # Fall back to simple translation
+            translation = await self.translate_word(sentence, source_language, target_language)
+            return {
+                "is_correct": True,
+                "error_description": None,
+                "corrected_sentence": None,
+                "translation": translation,
+            }
+        except Exception as e:
+            logger.exception(f"Sentence analysis failed: {e}")
+            # Fall back to simple translation
+            translation = await self.translate_word(sentence, source_language, target_language)
+            return {
+                "is_correct": True,
+                "error_description": None,
+                "corrected_sentence": None,
+                "translation": translation,
+            }
 
     async def explain_grammar(self, text: str) -> str:
         """Explain the grammar of a Greek sentence or phrase.

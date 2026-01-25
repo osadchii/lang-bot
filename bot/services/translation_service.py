@@ -35,6 +35,18 @@ class CardData:
     example: str
 
 
+@dataclass
+class SentenceAnalysisResult:
+    """Result of sentence analysis with feedback."""
+
+    original_sentence: str
+    source_language: str
+    is_correct: bool
+    error_description: str | None
+    corrected_sentence: str | None
+    translation: str
+
+
 class TranslationService:
     """Service for smart translations with card awareness."""
 
@@ -133,4 +145,29 @@ class TranslationService:
             front=card_dict.get("front", word),
             back=card_dict.get("back", ""),
             example=card_dict.get("example", ""),
+        )
+
+    async def analyze_and_translate_text(
+        self,
+        sentence: str,
+        source_language: str,
+    ) -> SentenceAnalysisResult:
+        """Analyze sentence for errors and translate.
+
+        Args:
+            sentence: Sentence to analyze
+            source_language: 'greek' or 'russian'
+
+        Returns:
+            SentenceAnalysisResult with analysis and translation
+        """
+        result = await self.ai_service.analyze_and_translate_sentence(sentence, source_language)
+
+        return SentenceAnalysisResult(
+            original_sentence=sentence,
+            source_language=source_language,
+            is_correct=result.get("is_correct", True),
+            error_description=result.get("error_description"),
+            corrected_sentence=result.get("corrected_sentence"),
+            translation=result.get("translation", ""),
         )

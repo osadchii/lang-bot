@@ -208,7 +208,9 @@ async def _handle_text_translation(
     state: FSMContext,
     result: CategorizationResult,
 ):
-    """Handle text/sentence translation requests with vocabulary extraction.
+    """Handle text/sentence translation requests with feedback and vocabulary extraction.
+
+    Provides feedback on grammatical correctness along with translation.
 
     Args:
         message: User message
@@ -223,14 +225,20 @@ async def _handle_text_translation(
 
     intent = result.intent
 
-    # Determine translation direction
-    if intent.source_language == "greek":
-        from_lang, to_lang = "greek", "russian"
-    else:
-        from_lang, to_lang = "russian", "greek"
+    # Analyze sentence for errors and get translation with feedback
+    trans_service = TranslationService(session)
+    analysis = await trans_service.analyze_and_translate_text(
+        sentence=intent.text,
+        source_language=intent.source_language,
+    )
 
-    ai_service = AIService()
-    translation = await ai_service.translate_word(intent.text, from_lang, to_lang)
+    # Build feedback message
+    feedback_message = trans_msg.get_sentence_feedback_message(
+        is_correct=analysis.is_correct,
+        translation=analysis.translation,
+        error_description=analysis.error_description,
+        corrected_sentence=analysis.corrected_sentence,
+    )
 
     # Log to conversation history
     conv_service = ConversationService(session)
@@ -241,7 +249,7 @@ async def _handle_text_translation(
     )
     await conv_service.add_assistant_message(
         user=user,
-        content=translation,
+        content=analysis.translation,
         message_type="translate",
     )
 
@@ -250,7 +258,7 @@ async def _handle_text_translation(
     extraction = await vocab_service.extract_vocabulary(
         user=user,
         phrase=intent.text,
-        phrase_translation=translation,
+        phrase_translation=analysis.translation,
         source_language=intent.source_language,
     )
 
@@ -274,24 +282,21 @@ async def _handle_text_translation(
             source_language=intent.source_language,
         )
 
-        # Show translation with "Learn words" button
+        # Show feedback with "Learn words" button
         await message.answer(
-            vocab_msg.get_translation_with_vocabulary(
-                translation=translation,
-                new_words_count=len(extraction.new_words),
-            ),
+            f"{feedback_message}\n\n{vocab_msg.MSG_VOCABULARY_FOUND.format(count=len(extraction.new_words))}",
             reply_markup=get_vocabulary_extraction_keyboard(extraction_hash),
         )
     elif extraction.existing_words:
         # All words already in cards
         await message.answer(
-            f"{ai_msg.get_translation_result(translation)}\n\n{vocab_msg.MSG_NO_NEW_WORDS}",
+            f"{feedback_message}\n\n{vocab_msg.MSG_NO_NEW_WORDS}",
             reply_markup=get_main_menu_keyboard(),
         )
     else:
-        # No words extracted - show simple translation
+        # No words extracted - show feedback only
         await message.answer(
-            ai_msg.get_translation_result(translation),
+            feedback_message,
             reply_markup=get_main_menu_keyboard(),
         )
 

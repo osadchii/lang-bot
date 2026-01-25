@@ -15,6 +15,8 @@ MSG_TRANSLATION_WITH_VOCAB = (
     "<b>Перевод:</b>\n\n" "{translation}\n\n" "Найдено <b>{count}</b> новых слов для изучения"
 )
 
+MSG_VOCABULARY_FOUND = "Найдено <b>{count}</b> новых слов для изучения"
+
 MSG_WORD_SELECTION = (
     "<b>Слово {current}/{total}:</b>\n\n"
     "<b>{lemma}</b>\n"
