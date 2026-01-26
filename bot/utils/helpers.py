@@ -1,5 +1,6 @@
 """Helper utilities."""
 
+import hashlib
 from datetime import UTC, datetime
 
 
@@ -39,3 +40,18 @@ def build_callback_data(action: str, *values) -> str:
         Callback data string
     """
     return ":".join([action] + [str(v) for v in values])
+
+
+def create_callback_hash(text: str) -> str:
+    """Create a short hash for callback data.
+
+    Used to create unique identifiers for callback data that fit within
+    Telegram's callback data size limit (64 bytes).
+
+    Args:
+        text: Text to hash
+
+    Returns:
+        8-character MD5 hash
+    """
+    return hashlib.md5(text.encode()).hexdigest()[:8]

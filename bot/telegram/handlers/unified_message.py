@@ -1,6 +1,5 @@
 """Unified message handler with AI-powered categorization."""
 
-import hashlib
 import json
 
 from aiogram import F, Router
@@ -31,22 +30,11 @@ from bot.services.vocabulary_extraction_service import VocabularyExtractionServi
 from bot.telegram.keyboards.main_menu import get_main_menu_keyboard
 from bot.telegram.keyboards.translation_keyboards import get_translation_add_keyboard
 from bot.telegram.keyboards.vocabulary_keyboards import get_vocabulary_extraction_keyboard
+from bot.utils.helpers import create_callback_hash
 
 logger = get_logger(__name__)
 
 router = Router(name="unified_message")
-
-
-def _hash_word(word: str) -> str:
-    """Create a short hash for callback data.
-
-    Args:
-        word: Word to hash
-
-    Returns:
-        8-character hash
-    """
-    return hashlib.md5(word.encode()).hexdigest()[:8]
 
 
 @router.message(
@@ -173,7 +161,7 @@ async def _handle_word_translation(
         )
     else:
         # Store data for potential add flow
-        word_hash = _hash_word(translation_result.word)
+        word_hash = create_callback_hash(translation_result.word)
         suggested_name = (
             translation_result.suggested_deck.name
             if translation_result.suggested_deck
@@ -264,7 +252,7 @@ async def _handle_text_translation(
 
     if extraction.new_words:
         # Store extraction data in FSM state
-        extraction_hash = _hash_word(intent.text)
+        extraction_hash = create_callback_hash(intent.text)
         words_data = [
             {
                 "original_form": w.original_form,
