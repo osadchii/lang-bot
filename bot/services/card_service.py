@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.core.spaced_repetition import get_initial_srs_values
 from bot.database.models.card import Card
 from bot.database.repositories.card_repo import CardRepository
+from bot.database.repositories.deck_repo import DeckRepository
 
 
 class CardService:
@@ -62,6 +63,29 @@ class CardService:
             Card instance or None
         """
         return await self.repo.get_by_id(card_id)
+
+    async def get_user_card(self, card_id: int, user_id: int) -> Card | None:
+        """Get card and verify user ownership.
+
+        Args:
+            card_id: Card ID
+            user_id: User ID
+
+        Returns:
+            Card if found and owned by user, None otherwise
+        """
+        card = await self.repo.get_by_id(card_id)
+        if not card:
+            return None
+
+        # Verify ownership via deck
+        deck_repo = DeckRepository(self.repo.session)
+        deck = await deck_repo.get_by_id(card.deck_id)
+
+        if not deck or deck.user_id != user_id:
+            return None
+
+        return card
 
     async def get_deck_cards(
         self, deck_id: int, limit: int | None = None, offset: int = 0
@@ -135,6 +159,7 @@ class CardService:
         back: str | None = None,
         example: str | None = None,
         notes: str | None = None,
+        clear_example: bool = False,
     ) -> Card:
         """Update card content.
 
@@ -144,16 +169,19 @@ class CardService:
             back: New back text
             example: New example
             notes: New notes
+            clear_example: If True, clear the example field (set to None)
 
         Returns:
             Updated card instance
         """
-        update_data = {}
+        update_data: dict[str, str | None] = {}
         if front is not None:
             update_data["front"] = front
         if back is not None:
             update_data["back"] = back
-        if example is not None:
+        if clear_example:
+            update_data["example"] = None
+        elif example is not None:
             update_data["example"] = example
         if notes is not None:
             update_data["notes"] = notes

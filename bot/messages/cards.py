@@ -157,3 +157,108 @@ BTN_PREVIOUS = "Назад"
 BTN_NEXT = "Вперед"
 BTN_BACK_TO_DECK = "К колоде"
 BTN_CONFIRM_DELETE = "Да, удалить"
+
+# Card edit messages
+MSG_CARD_NOT_FOUND = "Карточка не найдена."
+
+
+def get_edit_step_1(front: str, back: str, example: str | None) -> str:
+    """Get edit step 1 message (editing front).
+
+    Args:
+        front: Current front text
+        back: Current back text
+        example: Current example
+
+    Returns:
+        Edit step 1 message
+    """
+    example_text = html.escape(example) if example else "Нет"
+    return (
+        f"<b>Редактирование карточки</b>\n\n"
+        f"<b>Текущие данные:</b>\n"
+        f"- Лицевая сторона: {html.escape(front)}\n"
+        f"- Обратная сторона: {html.escape(back)}\n"
+        f"- Пример: {example_text}\n\n"
+        f"<b>Шаг 1/3:</b> Введи новую <b>лицевую сторону</b>\n"
+        f"(или отправь /skip чтобы оставить текущую):"
+    )
+
+
+def get_edit_step_2(front: str) -> str:
+    """Get edit step 2 message (editing back).
+
+    Args:
+        front: New front text
+
+    Returns:
+        Edit step 2 message
+    """
+    return (
+        f"<b>Редактирование карточки</b>\n\n"
+        f"Новая лицевая сторона: <b>{html.escape(front)}</b>\n\n"
+        f"<b>Шаг 2/3:</b> Введи новую <b>обратную сторону</b>\n"
+        f"(или отправь /skip чтобы оставить текущую):"
+    )
+
+
+def get_edit_step_3(front: str, back: str) -> str:
+    """Get edit step 3 message (editing example).
+
+    Args:
+        front: New front text
+        back: New back text
+
+    Returns:
+        Edit step 3 message
+    """
+    return (
+        f"<b>Редактирование карточки</b>\n\n"
+        f"Лицевая сторона: <b>{html.escape(front)}</b>\n"
+        f"Обратная сторона: <b>{html.escape(back)}</b>\n\n"
+        f"<b>Шаг 3/3:</b> Введи новый <b>пример использования</b>\n"
+        f"(или отправь /skip чтобы оставить текущий, /clear чтобы удалить):"
+    )
+
+
+def get_card_updated_message(front: str, back: str, example: str | None) -> str:
+    """Get card updated success message.
+
+    Args:
+        front: Updated front text
+        back: Updated back text
+        example: Updated example
+
+    Returns:
+        Success message
+    """
+    example_text = html.escape(example) if example else "Нет"
+    return (
+        f"<b>Карточка обновлена!</b>\n\n"
+        f"<b>Лицевая сторона:</b> {html.escape(front)}\n"
+        f"<b>Обратная сторона:</b> {html.escape(back)}\n"
+        f"<b>Пример:</b> {example_text}"
+    )
+
+
+# Card delete messages
+def get_delete_confirm_message(front: str, back: str) -> str:
+    """Get delete confirmation message.
+
+    Args:
+        front: Card front text
+        back: Card back text
+
+    Returns:
+        Confirmation message
+    """
+    return (
+        f"<b>Удаление карточки</b>\n\n"
+        f"Ты уверен, что хочешь удалить карточку?\n\n"
+        f"<b>Лицевая сторона:</b> {html.escape(front)}\n"
+        f"<b>Обратная сторона:</b> {html.escape(back)}\n\n"
+        f"<i>Это действие нельзя отменить.</i>"
+    )
+
+
+MSG_CARD_DELETED = "Карточка успешно удалена."

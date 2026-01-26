@@ -14,11 +14,12 @@ from bot.services.deck_service import DeckService
 from bot.telegram.keyboards.card_keyboards import (
     get_card_actions_keyboard,
     get_card_creation_method_keyboard,
+    get_card_delete_confirm_keyboard,
     get_card_list_keyboard,
 )
 from bot.telegram.keyboards.deck_keyboards import get_deck_list_keyboard
 from bot.telegram.keyboards.main_menu import get_cancel_keyboard, get_main_menu_keyboard
-from bot.telegram.states.card_states import CardAICreation, CardCreation
+from bot.telegram.states.card_states import CardAICreation, CardCreation, CardEdit
 from bot.telegram.utils.callback_parser import parse_callback_int
 from bot.utils.language_detector import detect_language
 
@@ -301,4 +302,205 @@ async def show_card_details(callback: CallbackQuery, session: AsyncSession):
     await callback.message.edit_text(
         text, reply_markup=get_card_actions_keyboard(card_id, card.deck_id)
     )
+    await callback.answer()
+
+
+# Card editing handlers
+
+
+@router.callback_query(F.data.startswith("edit_card:"))
+async def start_card_edit(
+    callback: CallbackQuery, state: FSMContext, session: AsyncSession, user: User
+):
+    """Start card editing process.
+
+    Args:
+        callback: Callback query
+        state: FSM state
+        session: Database session
+        user: Current user
+    """
+    card_id = parse_callback_int(callback.data)
+    if card_id is None:
+        await callback.answer(common_msg.MSG_INVALID_DATA)
+        return
+
+    card_service = CardService(session)
+    card = await card_service.get_user_card(card_id, user.id)
+
+    if not card:
+        await callback.answer(card_msg.MSG_CARD_NOT_FOUND, show_alert=True)
+        return
+
+    await state.update_data(
+        card_id=card.id,
+        deck_id=card.deck_id,
+        original_front=card.front,
+        original_back=card.back,
+        original_example=card.example,
+    )
+    await state.set_state(CardEdit.waiting_for_front)
+
+    await callback.message.edit_text(card_msg.get_edit_step_1(card.front, card.back, card.example))
+    await callback.answer()
+
+
+@router.message(CardEdit.waiting_for_front)
+async def process_edit_front(message: Message, state: FSMContext):
+    """Process new front side or skip.
+
+    Args:
+        message: Message
+        state: FSM state
+    """
+    text = message.text.strip()
+    data = await state.get_data()
+
+    if text == "/skip":
+        new_front = data.get("original_front")
+    else:
+        new_front = text
+
+    await state.update_data(new_front=new_front)
+    await state.set_state(CardEdit.waiting_for_back)
+
+    await message.answer(
+        card_msg.get_edit_step_2(new_front),
+        reply_markup=get_cancel_keyboard(),
+    )
+
+
+@router.message(CardEdit.waiting_for_back)
+async def process_edit_back(message: Message, state: FSMContext):
+    """Process new back side or skip.
+
+    Args:
+        message: Message
+        state: FSM state
+    """
+    text = message.text.strip()
+    data = await state.get_data()
+
+    if text == "/skip":
+        new_back = data.get("original_back")
+    else:
+        new_back = text
+
+    await state.update_data(new_back=new_back)
+    await state.set_state(CardEdit.waiting_for_example)
+
+    new_front = data.get("new_front")
+    await message.answer(
+        card_msg.get_edit_step_3(new_front, new_back),
+        reply_markup=get_cancel_keyboard(),
+    )
+
+
+@router.message(CardEdit.waiting_for_example)
+async def process_edit_example(message: Message, state: FSMContext, session: AsyncSession):
+    """Process new example and save card.
+
+    Args:
+        message: Message
+        state: FSM state
+        session: Database session
+    """
+    text = message.text.strip()
+    data = await state.get_data()
+
+    clear_example = False
+    if text == "/skip":
+        new_example = data.get("original_example")
+    elif text == "/clear":
+        new_example = None
+        clear_example = True
+    else:
+        new_example = text
+
+    card_id = data.get("card_id")
+    new_front = data.get("new_front")
+    new_back = data.get("new_back")
+
+    card_service = CardService(session)
+    card = await card_service.get_card(card_id)
+
+    if not card:
+        await state.clear()
+        await message.answer(
+            card_msg.MSG_CARD_NOT_FOUND,
+            reply_markup=get_main_menu_keyboard(),
+        )
+        return
+
+    await card_service.update_card(
+        card=card,
+        front=new_front,
+        back=new_back,
+        example=new_example,
+        clear_example=clear_example,
+    )
+
+    await state.clear()
+
+    await message.answer(
+        card_msg.get_card_updated_message(new_front, new_back, new_example),
+        reply_markup=get_main_menu_keyboard(),
+    )
+
+
+# Card deletion handlers
+
+
+@router.callback_query(F.data.startswith("delete_card:"))
+async def confirm_delete_card(callback: CallbackQuery, session: AsyncSession, user: User):
+    """Show card deletion confirmation.
+
+    Args:
+        callback: Callback query
+        session: Database session
+        user: Current user
+    """
+    card_id = parse_callback_int(callback.data)
+    if card_id is None:
+        await callback.answer(common_msg.MSG_INVALID_DATA)
+        return
+
+    card_service = CardService(session)
+    card = await card_service.get_user_card(card_id, user.id)
+
+    if not card:
+        await callback.answer(card_msg.MSG_CARD_NOT_FOUND, show_alert=True)
+        return
+
+    await callback.message.edit_text(
+        card_msg.get_delete_confirm_message(card.front, card.back),
+        reply_markup=get_card_delete_confirm_keyboard(card.id, card.deck_id),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("confirm_delete_card:"))
+async def execute_delete_card(callback: CallbackQuery, session: AsyncSession, user: User):
+    """Execute card deletion.
+
+    Args:
+        callback: Callback query
+        session: Database session
+        user: Current user
+    """
+    card_id = parse_callback_int(callback.data)
+    if card_id is None:
+        await callback.answer(common_msg.MSG_INVALID_DATA)
+        return
+
+    card_service = CardService(session)
+    card = await card_service.get_user_card(card_id, user.id)
+
+    if not card:
+        await callback.answer(card_msg.MSG_CARD_NOT_FOUND, show_alert=True)
+        return
+
+    await card_service.delete_card(card)
+
+    await callback.message.edit_text(card_msg.MSG_CARD_DELETED)
     await callback.answer()
