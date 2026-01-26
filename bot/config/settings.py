@@ -51,6 +51,16 @@ class Settings(BaseSettings):
         le=300.0,
         description="OpenAI API request timeout in seconds",
     )
+    openai_vision_model: str = Field(
+        default="gpt-4o",
+        description="OpenAI model for vision tasks (must support vision)",
+    )
+    max_image_size_mb: float = Field(
+        default=20.0,
+        ge=1.0,
+        le=20.0,
+        description="Maximum image size in MB for processing",
+    )
 
     # Application Settings
     debug: bool = Field(

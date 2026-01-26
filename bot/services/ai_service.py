@@ -1,12 +1,24 @@
 """AI service for OpenAI integration."""
 
 import json
+from dataclasses import dataclass
 
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI, RateLimitError
 
 from bot.config.logging_config import get_logger
 from bot.config.settings import settings
 from bot.messages import ai as ai_messages
+
+
+@dataclass
+class ImageTextResult:
+    """Result from image text recognition and processing."""
+
+    recognized_text: str
+    translation: str
+    additional_response: str | None = None
+    has_greek_text: bool = True
+
 
 logger = get_logger(__name__)
 
@@ -135,6 +147,37 @@ SENTENCE_ANALYSIS_USER_PROMPT = """Проанализируй предложен
 Примеры:
 - Правильное: {{"is_correct": true, "error_description": null, "corrected_sentence": null, "translation": "перевод"}}
 - С ошибкой: {{"is_correct": false, "error_description": "Ошибка в согласовании прилагательного.", "corrected_sentence": "исправленный вариант", "translation": "перевод исправленного"}}"""
+
+# Prompt for photo text recognition
+PHOTO_TEXT_SYSTEM_PROMPT = """Ты - ассистент для изучения греческого языка.
+Твоя задача - распознать греческий текст на изображении и помочь пользователю.
+
+ИНСТРУКЦИИ:
+1. Найди и распознай ВЕСЬ греческий текст на изображении
+2. Сохраняй оригинальное форматирование (переносы строк, пунктуацию)
+3. Переведи текст на русский язык
+4. Если пользователь дал инструкцию - выполни её
+
+ТИПЫ ИЗОБРАЖЕНИЙ:
+- Уличные вывески и указатели
+- Страницы учебников
+- Рукописные записи
+- Документы и тексты
+
+ФОРМАТ ОТВЕТА (JSON):
+{
+    "has_greek_text": true/false,
+    "recognized_text": "распознанный греческий текст",
+    "translation": "перевод на русский",
+    "response": "ответ на запрос пользователя (если есть)" | null
+}
+
+ВАЖНО:
+- Если греческого текста нет, установи has_greek_text: false
+- Для существительных указывай артикли при переводе
+- Если пользователь просит проверить домашнее задание, дай подробный feedback об ошибках
+- Если просят объяснить грамматику, дай подробное объяснение
+- Если просят выполнить упражнение, выполни его и объясни решение"""
 
 
 class AIService:
@@ -749,3 +792,103 @@ class AIService:
         except Exception as e:
             logger.exception(f"Word extraction failed: {e}")
             return []
+
+    async def process_image_text(
+        self,
+        image_base64: str,
+        user_prompt: str | None = None,
+    ) -> ImageTextResult:
+        """Process image containing Greek text.
+
+        Uses OpenAI Vision API to recognize Greek text from images
+        and optionally process it according to user's prompt.
+
+        Args:
+            image_base64: Base64-encoded image data
+            user_prompt: Optional user instruction (e.g., "check homework")
+
+        Returns:
+            ImageTextResult with recognized text and processing results
+        """
+        try:
+            # Type hint needed because messages can have string or list content
+            messages: list[dict] = [
+                {
+                    "role": "system",
+                    "content": PHOTO_TEXT_SYSTEM_PROMPT,
+                }
+            ]
+
+            # Build user message with image
+            user_content: list[dict] = [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_base64}",
+                        "detail": "high",
+                    },
+                },
+            ]
+
+            text = (
+                f"Запрос пользователя: {user_prompt}"
+                if user_prompt
+                else "Распознай греческий текст на изображении и переведи на русский."
+            )
+            user_content.append({"type": "text", "text": text})
+
+            messages.append({"role": "user", "content": user_content})
+
+            response = await self.client.chat.completions.create(
+                model=settings.openai_vision_model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+                temperature=0.3,
+                response_format={"type": "json_object"},
+            )
+
+            content = response.choices[0].message.content or "{}"
+            result = json.loads(content)
+
+            return ImageTextResult(
+                recognized_text=result.get("recognized_text", ""),
+                translation=result.get("translation", ""),
+                additional_response=result.get("response"),
+                has_greek_text=result.get("has_greek_text", False),
+            )
+
+        except RateLimitError:
+            logger.warning("OpenAI rate limit exceeded for vision request")
+            return ImageTextResult(
+                recognized_text="",
+                translation=ai_messages.MSG_AI_RATE_LIMIT,
+                has_greek_text=False,
+            )
+        except APITimeoutError:
+            logger.error("OpenAI vision request timeout")
+            return ImageTextResult(
+                recognized_text="",
+                translation=ai_messages.MSG_AI_TIMEOUT,
+                has_greek_text=False,
+            )
+        except APIConnectionError:
+            logger.error("Failed to connect to OpenAI for vision")
+            return ImageTextResult(
+                recognized_text="",
+                translation=ai_messages.MSG_AI_CONNECTION_ERROR,
+                has_greek_text=False,
+            )
+        except APIError as e:
+            logger.error(f"OpenAI Vision API error: {e}")
+            return ImageTextResult(
+                recognized_text="",
+                translation=ai_messages.MSG_AI_SERVICE_ERROR,
+                has_greek_text=False,
+            )
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse vision response: {e}")
+            return ImageTextResult(
+                recognized_text="",
+                translation=ai_messages.MSG_AI_UNEXPECTED_ERROR,
+                has_greek_text=False,
+            )

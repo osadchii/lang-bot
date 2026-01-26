@@ -64,6 +64,7 @@ def setup_handlers(dp: Dispatcher) -> None:
         errors,
         exercises,
         learning,
+        photo_text,
         start,
         statistics,
         translation,
@@ -80,6 +81,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     dp.include_router(translation.router)  # Callbacks only
     dp.include_router(vocabulary_extraction.router)  # Vocabulary extraction callbacks
     dp.include_router(ai_chat.router)  # Commands only (/translate, /grammar, /clear_history)
+    dp.include_router(photo_text.router)  # Photo text recognition (before unified_message)
     dp.include_router(unified_message.router)  # AI-powered message categorization
     dp.include_router(statistics.router)
     dp.include_router(errors.router)  # Error handler should be last
